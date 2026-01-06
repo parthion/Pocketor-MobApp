@@ -93,8 +93,16 @@ export const getMonthsBetweenDates = (startDate: string, endDate: string): numbe
 /**
  * Format currency with symbol
  */
-export const formatCurrency = (amount: number, symbol = '₹'): string => {
-  return `${symbol} ${amount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`;
+export const formatCurrency = (amount: number | string, symbol = '₹'): string => {
+  // Convert to number if it's a string
+  const numericAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
+  
+  // Handle invalid numbers
+  if (isNaN(numericAmount)) {
+    return `${symbol} 0.00`;
+  }
+  
+  return `${symbol} ${numericAmount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`;
 };
 
 /**

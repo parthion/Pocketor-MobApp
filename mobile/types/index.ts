@@ -38,6 +38,7 @@ export interface Collection {
   members: Member[];
   contributions: Contribution[];
   createdDate: string;
+  createdAt?: string;  // alias for compatibility
   status: 'active' | 'completed' | 'paused';
 }
 

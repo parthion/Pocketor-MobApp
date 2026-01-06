@@ -73,9 +73,15 @@ router.get('/', verifyToken, async (req, res) => {
       limit
     );
 
+    // Return paginated response format
     res.status(constants.STATUS_CODES.OK).json({
       success: true,
-      data: collections.map(c => c.toJSON()),
+      data: {
+        data: collections.map(c => c.toJSON()),
+        page,
+        limit,
+        total: collections.length,
+      },
     });
   } catch (error) {
     console.error('Get collections error:', error);
@@ -89,11 +95,16 @@ router.get('/', verifyToken, async (req, res) => {
 
 /**
  * GET /api/collections/:id
- * Get collection by ID
+ * Get collection by ID with members and contributions
+ * Only returns collection if it belongs to the authenticated user
  */
 router.get('/:id', verifyToken, async (req, res) => {
   try {
-    const collection = await CollectionRepository.getById(req.params.id);
+    // Fetch collection using both ID and userId from JWT token
+    const collection = await CollectionRepository.getByIdAndUserId(
+      req.params.id,
+      req.userId
+    );
 
     if (!collection) {
       return res.status(constants.STATUS_CODES.NOT_FOUND).json({
@@ -102,17 +113,9 @@ router.get('/:id', verifyToken, async (req, res) => {
       });
     }
 
-    // Verify ownership
-    if (collection.userId !== req.userId) {
-      return res.status(constants.STATUS_CODES.FORBIDDEN).json({
-        success: false,
-        message: constants.MESSAGES.FORBIDDEN,
-      });
-    }
-
     res.status(constants.STATUS_CODES.OK).json({
       success: true,
-      data: collection.toJSON(),
+      data: collection, // Already includes members and contributions
     });
   } catch (error) {
     console.error('Get collection error:', error);
@@ -127,23 +130,20 @@ router.get('/:id', verifyToken, async (req, res) => {
 /**
  * PUT /api/collections/:id
  * Update collection
+ * Only updates if collection belongs to the authenticated user
  */
 router.put('/:id', verifyToken, async (req, res) => {
   try {
-    const collection = await CollectionRepository.getById(req.params.id);
+    // Verify collection exists and belongs to user
+    const collection = await CollectionRepository.getByIdAndUserId(
+      req.params.id,
+      req.userId
+    );
 
     if (!collection) {
       return res.status(constants.STATUS_CODES.NOT_FOUND).json({
         success: false,
         message: constants.MESSAGES.COLLECTION_NOT_FOUND,
-      });
-    }
-
-    // Verify ownership
-    if (collection.userId !== req.userId) {
-      return res.status(constants.STATUS_CODES.FORBIDDEN).json({
-        success: false,
-        message: constants.MESSAGES.FORBIDDEN,
       });
     }
 
@@ -171,23 +171,20 @@ router.put('/:id', verifyToken, async (req, res) => {
 /**
  * DELETE /api/collections/:id
  * Delete collection
+ * Only deletes if collection belongs to the authenticated user
  */
 router.delete('/:id', verifyToken, async (req, res) => {
   try {
-    const collection = await CollectionRepository.getById(req.params.id);
+    // Verify collection exists and belongs to user
+    const collection = await CollectionRepository.getByIdAndUserId(
+      req.params.id,
+      req.userId
+    );
 
     if (!collection) {
       return res.status(constants.STATUS_CODES.NOT_FOUND).json({
         success: false,
         message: constants.MESSAGES.COLLECTION_NOT_FOUND,
-      });
-    }
-
-    // Verify ownership
-    if (collection.userId !== req.userId) {
-      return res.status(constants.STATUS_CODES.FORBIDDEN).json({
-        success: false,
-        message: constants.MESSAGES.FORBIDDEN,
       });
     }
 

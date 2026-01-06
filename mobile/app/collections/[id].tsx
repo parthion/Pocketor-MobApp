@@ -1,8 +1,9 @@
 import { useCollections } from '@/context/CollectionsContext';
 import { calculateInterest, formatCurrency, getFrequencyText, getMonthsBetweenDates } from '@/utils/calculations';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
+    ActivityIndicator,
     Alert,
     Modal,
     ScrollView,
@@ -16,14 +17,43 @@ import {
 export default function CollectionDetailsScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
-  const { getCollection, addContribution, addMember } = useCollections();
+  const { getCollection, fetchCollectionById, addContribution, addMember } = useCollections();
   const [showAddMember, setShowAddMember] = useState(false);
   const [showAddContribution, setShowAddContribution] = useState(false);
   const [memberName, setMemberName] = useState('');
   const [contributionAmount, setContributionAmount] = useState('');
   const [selectedMemberId, setSelectedMemberId] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [collection, setCollection] = useState(getCollection(id as string));
 
-  const collection = getCollection(id as string);
+  // Fetch collection data from API when component mounts
+  useEffect(() => {
+    const loadCollectionData = async () => {
+      setLoading(true);
+      try {
+        const fetchedCollection = await fetchCollectionById(id as string);
+        if (fetchedCollection) {
+          setCollection(fetchedCollection);
+        }
+      } catch (error) {
+        console.error('Error loading collection:', error);
+        Alert.alert('Error', 'Failed to load collection details');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadCollectionData();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#007AFF" />
+        <Text style={styles.loadingText}>Loading collection details...</Text>
+      </View>
+    );
+  }
 
   if (!collection) {
     return (
@@ -320,7 +350,18 @@ export default function CollectionDetailsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#F5F5F5',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F5F5F5',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#666',
   },
   errorContainer: {
     flex: 1,

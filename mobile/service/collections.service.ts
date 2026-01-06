@@ -80,8 +80,19 @@ export const createCollection = async (collectionData: {
   frequency?: string;
   interestRate?: number;
   startDate?: string;
+  totalAmount?: number;
 }) => {
-  return collectionsCall<{ id: string }>('/collections', 'POST', collectionData);
+  // Ensure required fields are present
+  const payload = {
+    name: collectionData.name,
+    description: collectionData.description || '',
+    frequency: collectionData.frequency || 'monthly',
+    interestRate: collectionData.interestRate || 0,
+    startDate: collectionData.startDate || new Date().toISOString().split('T')[0],
+    totalAmount: collectionData.totalAmount || 1000, // Default to 1000 if not provided
+  };
+  
+  return collectionsCall<{ id: string }>('/collections', 'POST', payload);
 };
 
 /**

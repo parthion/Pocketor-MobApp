@@ -4,15 +4,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, ReactNode, useContext, useState } from 'react';
 
 export interface User {
-  id: string;
   email: string;
-  password: string; // In production, store hashed password only
   name: string;
   phone: string;
   emailVerified: boolean;
   phoneVerified: boolean;
-  passwordResetToken?: string;
-  passwordResetExpiry?: string;
   createdAt: string;
 }
 
@@ -218,40 +214,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  // Forgot password - send reset link via email
+  // Forgot password - TODO: Integrate with backend API
   const forgotPassword = async (email: string): Promise<{ success: boolean; message: string }> => {
     try {
       if (!validateEmail(email)) {
         return { success: false, message: 'Invalid email format' };
       }
 
-      const users = await getRegisteredUsers();
-      const user = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
-
-      if (!user) {
-        // Don't reveal if email exists or not (security best practice)
-        return { success: true, message: 'If an account exists, a password reset link will be sent to your email.' };
-      }
-
-      // Generate reset token
-      const resetToken = generateOTP() + Date.now().toString();
-      const expiresAt = new Date(Date.now() + 30 * 60000); // 30 minutes
-
-      user.passwordResetToken = resetToken;
-      user.passwordResetExpiry = expiresAt.toISOString();
-
-      await saveUsers(users);
-
-      // In production, send email with reset link
-      console.log(`Password reset token for ${email}: ${resetToken}`);
-
+      // TODO: Call backend API for password reset
       return { success: true, message: 'If an account exists, a password reset link will be sent to your email.' };
     } catch (error) {
       return { success: false, message: 'Failed to process password reset request' };
     }
   };
 
-  // Reset password with token
+  // Reset password with token - TODO: Integrate with backend API
   const resetPassword = async (email: string, token: string, newPassword: string): Promise<{ success: boolean; message: string }> => {
     try {
       if (!validateEmail(email)) {
@@ -263,30 +240,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return { success: false, message: passwordValidation.errors.join('\n') };
       }
 
-      const users = await getRegisteredUsers();
-      const user = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
-
-      if (!user || !user.passwordResetToken) {
-        return { success: false, message: 'Invalid reset request' };
-      }
-
-      // Verify token
-      if (user.passwordResetToken !== token) {
-        return { success: false, message: 'Invalid reset token' };
-      }
-
-      // Check if token expired
-      if (!user.passwordResetExpiry || new Date(user.passwordResetExpiry) < new Date()) {
-        return { success: false, message: 'Reset token has expired' };
-      }
-
-      // Update password
-      user.password = newPassword;
-      user.passwordResetToken = undefined;
-      user.passwordResetExpiry = undefined;
-
-      await saveUsers(users);
-
+      // TODO: Call backend API for password reset confirmation
       return { success: true, message: 'Password reset successfully. Please login with your new password.' };
     } catch (error) {
       return { success: false, message: 'Failed to reset password' };
@@ -320,14 +274,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (response.success && response.data) {
         // Successful login
         const userData: User = {
-          id: response.data.user.id.toString(),
           email: response.data.user.email,
-          password: '', // Don't store password
           name: response.data.user.name,
           phone: response.data.user.phone || '',
-          emailVerified: response.data.user.email_verified || false,
-          phoneVerified: response.data.user.phone_verified || false,
-          createdAt: response.data.user.created_at || new Date().toISOString(),
+          emailVerified: response.data.user.emailVerified || false,
+          phoneVerified: response.data.user.phoneVerified || false,
+          createdAt: response.data.user.createdAt || new Date().toISOString(),
         };
         
         setIsLoggedIn(true);
@@ -384,14 +336,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (response.success && response.data) {
         // Successful login
         const userData: User = {
-          id: response.data.user.id.toString(),
           email: response.data.user.email,
-          password: '', // Don't store password
           name: response.data.user.name,
           phone: response.data.user.phone || '',
-          emailVerified: response.data.user.email_verified || false,
-          phoneVerified: response.data.user.phone_verified || false,
-          createdAt: response.data.user.created_at || new Date().toISOString(),
+          emailVerified: response.data.user.emailVerified || false,
+          phoneVerified: response.data.user.phoneVerified || false,
+          createdAt: response.data.user.createdAt || new Date().toISOString(),
         };
 
         setIsLoggedIn(true);

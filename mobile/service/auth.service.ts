@@ -92,7 +92,7 @@ export const checkUserExists = async (email: string): Promise<boolean> => {
  * Login user with email
  */
 export const loginWithEmail = async (email: string, password: string) => {
-  const response = await authCall<{ token: string; refreshToken: string; user: any }>(
+  const response = await authCall<{ token: string; user: any }>(
     '/auth/login',
     'POST',
     { email, password, loginType: 'email' }
@@ -100,7 +100,6 @@ export const loginWithEmail = async (email: string, password: string) => {
 
   if (response.success && response.data) {
     await AsyncStorage.setItem(TOKEN_KEY, response.data.token);
-    await AsyncStorage.setItem(REFRESH_TOKEN_KEY, response.data.refreshToken);
   }
 
   return response;
@@ -110,7 +109,7 @@ export const loginWithEmail = async (email: string, password: string) => {
  * Login user with phone number
  */
 export const loginWithPhone = async (phone: string, password: string) => {
-  const response = await authCall<{ token: string; refreshToken: string; user: any }>(
+  const response = await authCall<{ token: string; user: any }>(
     '/auth/login',
     'POST',
     { phone, password, loginType: 'phone' }
@@ -118,7 +117,6 @@ export const loginWithPhone = async (phone: string, password: string) => {
 
   if (response.success && response.data) {
     await AsyncStorage.setItem(TOKEN_KEY, response.data.token);
-    await AsyncStorage.setItem(REFRESH_TOKEN_KEY, response.data.refreshToken);
   }
 
   return response;

@@ -76,7 +76,6 @@ router.post('/register', async (req, res) => {
       success: true,
       message: 'User registered successfully',
       data: {
-        userId: newUser.id,
         email: newUser.email,
         name: newUser.name,
       },

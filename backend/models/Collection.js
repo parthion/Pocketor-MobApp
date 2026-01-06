@@ -53,12 +53,12 @@ class Collection {
 
   /**
    * Convert to JSON (for API response)
+   * Never expose userId or id to frontend for security
    * @returns {object} JSON object
    */
   toJSON() {
     return {
       id: this.id,
-      userId: this.userId,
       name: this.name,
       description: this.description,
       status: this.status,

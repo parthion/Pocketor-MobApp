@@ -3,13 +3,13 @@ import { FrequencyType, InterestType } from '@/types';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    Alert,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 
 const FREQUENCIES: FrequencyType[] = ['weekly', 'monthly', 'custom'];
@@ -21,13 +21,20 @@ export default function CreateCollectionScreen() {
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [totalAmount, setTotalAmount] = useState('');
   const [interestRate, setInterestRate] = useState('');
   const [frequency, setFrequency] = useState<FrequencyType>('monthly');
   const [interestType, setInterestType] = useState<InterestType>('simple');
+  const [isCreating, setIsCreating] = useState(false);
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!name.trim()) {
       Alert.alert('Error', 'Collection name is required');
+      return;
+    }
+
+    if (!totalAmount.trim() || isNaN(Number(totalAmount)) || Number(totalAmount) <= 0) {
+      Alert.alert('Error', 'Please enter a valid total amount (greater than 0)');
       return;
     }
 
@@ -36,11 +43,12 @@ export default function CreateCollectionScreen() {
       return;
     }
 
+    setIsCreating(true);
     try {
-      addCollection({
+      const result = await addCollection({
         name: name.trim(),
         description: description.trim() || undefined,
-        totalAmount: 0,
+        totalAmount: Number(totalAmount),
         interestRate: Number(interestRate),
         interestType,
         frequency,
@@ -50,14 +58,21 @@ export default function CreateCollectionScreen() {
         status: 'active',
       });
 
-      Alert.alert('Success', 'Collection created successfully!', [
-        {
-          text: 'OK',
-          onPress: () => router.back(),
-        },
-      ]);
+      if (result.success) {
+        Alert.alert('Success', 'Collection created successfully!', [
+          {
+            text: 'OK',
+            onPress: () => router.back(),
+          },
+        ]);
+      } else {
+        Alert.alert('Error', result.message || 'Failed to create collection');
+      }
     } catch (error) {
+      console.error('Error creating collection:', error);
       Alert.alert('Error', 'Failed to create collection');
+    } finally {
+      setIsCreating(false);
     }
   };
 
@@ -88,6 +103,21 @@ export default function CreateCollectionScreen() {
             multiline
             numberOfLines={3}
           />
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.label}>Total Amount (₹) *</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="e.g., 10000"
+            value={totalAmount}
+            onChangeText={setTotalAmount}
+            placeholderTextColor="#999"
+            keyboardType="decimal-pad"
+          />
+          <Text style={styles.helper}>
+            Total target amount for this collection
+          </Text>
         </View>
 
         <View style={styles.section}>
@@ -157,8 +187,14 @@ export default function CreateCollectionScreen() {
           </Text>
         </View>
 
-        <TouchableOpacity style={styles.createButton} onPress={handleCreate}>
-          <Text style={styles.createButtonText}>Create Collection</Text>
+        <TouchableOpacity 
+          style={[styles.createButton, isCreating && styles.createButtonDisabled]} 
+          onPress={handleCreate}
+          disabled={isCreating}
+        >
+          <Text style={styles.createButtonText}>
+            {isCreating ? 'Creating...' : 'Create Collection'}
+          </Text>
         </TouchableOpacity>
       </View>
     </ScrollView>
@@ -262,6 +298,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 20,
     marginBottom: 40,
+  },
+  createButtonDisabled: {
+    backgroundColor: '#999',
+    opacity: 0.6,
   },
   createButtonText: {
     color: '#fff',

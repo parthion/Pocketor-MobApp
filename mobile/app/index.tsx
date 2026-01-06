@@ -1,3 +1,4 @@
+import { Button, Card, CollectionCard } from "@/components";
 import { useAuth } from "@/context/AuthContext";
 import { useCollections } from "@/context/CollectionsContext";
 import { formatCurrency } from "@/utils/calculations";
@@ -42,79 +43,54 @@ export default function Index() {
           </View>
         </View>
 
-        {/* Summary Stats */}
+        {/* Summary Stats - Using Card Component */}
         <View style={styles.statsContainer}>
-          <View style={styles.statCard}>
+          <Card style={styles.statCard} variant="elevated" padding={12}>
             <Text style={styles.statLabel}>Total Amount</Text>
             <Text style={styles.statValue}>{formatCurrency(totalAmount)}</Text>
-          </View>
-          <View style={styles.statCard}>
+          </Card>
+          <Card style={styles.statCard} variant="elevated" padding={12}>
             <Text style={styles.statLabel}>Collections</Text>
             <Text style={styles.statValue}>{collections.length}</Text>
-          </View>
-          <View style={styles.statCard}>
+          </Card>
+          <Card style={styles.statCard} variant="elevated" padding={12}>
             <Text style={styles.statLabel}>Active</Text>
             <Text style={styles.statValue}>{activeCollections}</Text>
-          </View>
+          </Card>
         </View>
 
         {/* Collections Section */}
         <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Collections</Text>
-          <TouchableOpacity
-            style={styles.createButton}
+          <Button
+            title="+ New"
             onPress={() => router.push("/collections/create")}
-          >
-            <Text style={styles.createButtonText}>+ New</Text>
-          </TouchableOpacity>
+            variant="primary"
+            size="small"
+          />
         </View>
 
         {collections.length === 0 ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyStateText}>No collections yet</Text>
             <Text style={styles.emptyStateSubtext}>Create your first collection to get started</Text>
-            <TouchableOpacity
-              style={styles.emptyStateButton}
+            <Button
+              title="Create Collection"
               onPress={() => router.push("/collections/create")}
-            >
-              <Text style={styles.emptyStateButtonText}>Create Collection</Text>
-            </TouchableOpacity>
+              variant="primary"
+              size="medium"
+              style={styles.emptyStateButton}
+            />
           </View>
         ) : (
           <View style={styles.collectionsList}>
             {collections.map((collection) => (
-              <TouchableOpacity
+              <CollectionCard
                 key={collection.id}
-                style={styles.collectionCard}
+                collection={collection}
                 onPress={() => router.push(`/collections/${collection.id}`)}
-              >
-                <View style={styles.collectionCardHeader}>
-                  <View>
-                    <Text style={styles.collectionName}>{collection.name}</Text>
-                    <Text style={styles.collectionInfo}>
-                      {collection.members.length} members • {collection.interestRate}% interest
-                    </Text>
-                  </View>
-                  <View style={[
-                    styles.statusBadge,
-                    collection.status === "active" ? styles.statusActive : styles.statusInactive
-                  ]}>
-                    <Text style={styles.statusBadgeText}>{collection.status}</Text>
-                  </View>
-                </View>
-
-                <View style={styles.collectionCardFooter}>
-                  <View>
-                    <Text style={styles.cardLabel}>Total</Text>
-                    <Text style={styles.cardValue}>{formatCurrency(collection.totalAmount)}</Text>
-                  </View>
-                  <View>
-                    <Text style={styles.cardLabel}>Contributions</Text>
-                    <Text style={styles.cardValue}>{collection.contributions.length}</Text>
-                  </View>
-                </View>
-              </TouchableOpacity>
+              />
             ))}
           </View>
         )}
