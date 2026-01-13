@@ -54,9 +54,34 @@ export default function Index() {
             <Text style={styles.statValue}>{collections.length}</Text>
           </Card>
           <Card style={styles.statCard} variant="elevated" padding={12}>
-            <Text style={styles.statLabel}>Active</Text>
+            <Text style={styles.statLabel}>Active Collections</Text>
             <Text style={styles.statValue}>{activeCollections}</Text>
           </Card>
+        </View>
+
+        {/* Quick Access Buttons */}
+        <View style={styles.quickAccessContainer}>
+          <TouchableOpacity 
+            style={styles.quickAccessButton}
+            onPress={() => router.push("/(tabs)/collection")}
+          >
+            <Text style={styles.quickAccessIcon}>💰</Text>
+            <Text style={styles.quickAccessText}>Collection</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.quickAccessButton}
+            onPress={() => router.push("/(tabs)/customer")}
+          >
+            <Text style={styles.quickAccessIcon}>👥</Text>
+            <Text style={styles.quickAccessText}>Customers</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.quickAccessButton}
+            onPress={() => router.push("/(tabs)/loans")}
+          >
+            <Text style={styles.quickAccessIcon}>💼</Text>
+            <Text style={styles.quickAccessText}>Loans</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Collections Section */}
@@ -252,6 +277,31 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
     color: "#333",
+  },
+  quickAccessContainer: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    marginHorizontal: 16,
+    marginVertical: 16,
+    gap: 12,
+  },
+  quickAccessButton: {
+    flex: 1,
+    backgroundColor: "#fff",
+    padding: 16,
+    borderRadius: 12,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  quickAccessIcon: {
+    fontSize: 32,
+    marginBottom: 8,
+  },
+  quickAccessText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#374151",
   },
   section: {
     paddingHorizontal: 15,

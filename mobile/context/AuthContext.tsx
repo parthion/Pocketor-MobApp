@@ -1,7 +1,7 @@
 import * as AuthService from '@/service/auth.service';
 import { OTPCode } from '@/types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import React, { createContext, ReactNode, useContext, useState } from 'react';
+import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 
 export interface User {
   email: string;
@@ -36,6 +36,31 @@ const OTP_STORAGE_KEY = 'app_otps';
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Check for existing auth token on mount
+  useEffect(() => {
+    checkAuthStatus();
+  }, []);
+
+  const checkAuthStatus = async () => {
+    try {
+      const token = await AsyncStorage.getItem('auth_token');
+      const userData = await AsyncStorage.getItem('user_data');
+      
+      if (token && userData) {
+        console.log('Found existing auth session, restoring...');
+        setIsLoggedIn(true);
+        setUser(JSON.parse(userData));
+      } else {
+        console.log('No existing auth session found');
+      }
+    } catch (error) {
+      console.error('Error checking auth status:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Validate email format
   const validateEmail = (email: string): boolean => {
@@ -282,6 +307,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           createdAt: response.data.user.createdAt || new Date().toISOString(),
         };
         
+        // Save user data to AsyncStorage for persistence
+        await AsyncStorage.setItem('user_data', JSON.stringify(userData));
+        
         setIsLoggedIn(true);
         setUser(userData);
 
@@ -343,6 +371,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           phoneVerified: response.data.user.phoneVerified || false,
           createdAt: response.data.user.createdAt || new Date().toISOString(),
         };
+
+        // Save user data to AsyncStorage for persistence
+        await AsyncStorage.setItem('user_data', JSON.stringify(userData));
 
         setIsLoggedIn(true);
         setUser(userData);
@@ -432,9 +463,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
+    // Clear auth data from AsyncStorage
+    await AsyncStorage.removeItem('auth_token');
+    await AsyncStorage.removeItem('refresh_token');
+    await AsyncStorage.removeItem('user_data');
+    
     setIsLoggedIn(false);
     setUser(null);
+    console.log('User logged out');
   };
 
   return (

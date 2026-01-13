@@ -27,6 +27,7 @@ async function authCall<T>(
 ): Promise<ApiResponse<T>> {
   try {
     const url = `${API_BASE_URL}${endpoint}`;
+    console.log(`[Auth API] ${method} ${url}`);
     const headers = await getAuthHeaders();
 
     const options: RequestInit = {
@@ -36,7 +37,19 @@ async function authCall<T>(
     };
 
     const response = await fetch(url, options);
-    const data = await response.json();
+    
+    // Check if we got a response before trying to parse JSON
+    if (!response) {
+      throw new Error('No response from server');
+    }
+
+    let data;
+    try {
+      data = await response.json();
+    } catch (jsonError) {
+      console.error('Failed to parse response as JSON:', jsonError);
+      throw new Error('Invalid response from server');
+    }
 
     if (!response.ok) {
       if (response.status === 401) {
@@ -48,9 +61,18 @@ async function authCall<T>(
     return data;
   } catch (error) {
     console.error(`Auth Error [${method} ${endpoint}]:`, error);
+    // Provide more specific error messages
+    let errorMessage = 'An error occurred';
+    if (error instanceof Error) {
+      if (error.message.includes('Failed to fetch') || error.message.includes('Network request failed')) {
+        errorMessage = 'Cannot connect to server. Please check if the backend is running.';
+      } else {
+        errorMessage = error.message;
+      }
+    }
     return {
       success: false,
-      message: error instanceof Error ? error.message : 'An error occurred',
+      message: errorMessage,
       error: error instanceof Error ? error.message : 'Unknown error',
     };
   }

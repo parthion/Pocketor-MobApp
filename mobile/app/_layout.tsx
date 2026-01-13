@@ -1,5 +1,6 @@
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { CollectionsProvider } from "@/context/CollectionsContext";
+import { LoanCollectionProvider } from "@/context/LoanCollectionContext";
 import { Stack } from "expo-router";
 
 function RootLayoutNav() {
@@ -10,6 +11,7 @@ function RootLayoutNav() {
       {isLoggedIn ? (
         <>
           <Stack.Screen name="index" options={{ headerShown: false }} />
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen
             name="collections/create"
             options={{
@@ -41,7 +43,9 @@ export default function RootLayout() {
   return (
     <AuthProvider>
       <CollectionsProvider>
-        <RootLayoutNav />
+        <LoanCollectionProvider>
+          <RootLayoutNav />
+        </LoanCollectionProvider>
       </CollectionsProvider>
     </AuthProvider>
   );

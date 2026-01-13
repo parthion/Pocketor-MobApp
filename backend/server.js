@@ -68,10 +68,12 @@ app.get('/api/db-health', async (req, res) => {
 // Import route handlers
 const authRoutes = require('./routes/authRoutes');
 const collectionRoutes = require('./routes/collectionRoutes');
+const loanCollectionRoutes = require('./routes/loanCollectionRoutes');
 
 // Mount routes
 app.use('/api/auth', authRoutes);
 app.use('/api/collections', collectionRoutes);
+app.use('/api/loan-collections', loanCollectionRoutes);
 
 // ============= ERROR HANDLING =============
 
@@ -122,6 +124,8 @@ app.listen(PORT, () => {
   console.log('  • GET  /api/collections/:id (protected)');
   console.log('  • PUT  /api/collections/:id (protected)');
   console.log('  • DELETE /api/collections/:id (protected)');
+  console.log('  • Loan Collections: /api/loan-collections/* (protected)');
+  console.log('    - Lines, Areas, Customers, Loans, Payments');
   console.log('\n✅ Ready to receive requests!\n');
 });
 
