@@ -1,5 +1,6 @@
 import AddAreaModal from '@/components/collections/AddAreaModal';
 import AddLineModal from '@/components/collections/AddLineModal';
+import Header from '@/components/layout/Header';
 import { useLoanCollection } from '@/context/LoanCollectionContext';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
@@ -9,6 +10,7 @@ import {
     FlatList,
     Modal,
     Platform,
+    SafeAreaView,
     ScrollView,
     StyleSheet,
     Text,
@@ -91,25 +93,17 @@ export default function CollectionScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Collection</Text>
-        <View style={styles.headerIcons}>
-          <TouchableOpacity style={styles.iconButton}>
-            <Text style={styles.icon}>💳</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton}>
-            <Text style={styles.icon}>🧮</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton}>
-            <Text style={styles.icon}>🔔</Text>
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>0</Text>
-            </View>
-          </TouchableOpacity>
-        </View>
-      </View>
+      <Header 
+        title="Collection" 
+        showBack={true}
+        onBackPress={() => router.replace('/')}
+        rightAction={{
+          icon: '🔔',
+          onPress: () => Alert.alert('Notifications', 'No new notifications')
+        }}
+      />
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Date Section */}
@@ -325,7 +319,7 @@ export default function CollectionScreen() {
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -334,50 +328,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    paddingTop: 50,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#000',
-  },
-  headerIcons: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  iconButton: {
-    position: 'relative',
-  },
-  icon: {
-    fontSize: 24,
-  },
-  badge: {
-    position: 'absolute',
-    top: -4,
-    right: -4,
-    backgroundColor: '#FF3B30',
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  badgeText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
   content: {
     flex: 1,
     padding: 16,
+  },
+  icon: {
+    fontSize: 24,
   },
   section: {
     marginBottom: 24,

@@ -4,7 +4,7 @@ import { useCollections } from "@/context/CollectionsContext";
 import { formatCurrency } from "@/utils/calculations";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Modal, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 export default function Index() {
   const { user, logout } = useAuth();
@@ -22,7 +22,7 @@ export default function Index() {
   const activeCollections = collections.filter((col) => col.status === "active").length;
 
   return (
-    <>
+    <SafeAreaView style={styles.safeArea}>
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
         {/* App Branding */}
         <View style={styles.brandingBar}>
@@ -195,11 +195,15 @@ export default function Index() {
         </View>
       </View>
     </Modal>
-  </>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#007AFF",
+  },
   container: {
     flex: 1,
     backgroundColor: "#f5f5f5",

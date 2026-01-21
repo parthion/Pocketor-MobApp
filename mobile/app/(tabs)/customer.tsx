@@ -1,10 +1,12 @@
 import AddCustomerModal from '@/components/collections/AddCustomerModal';
+import Header from '@/components/layout/Header';
 import { useLoanCollection } from '@/context/LoanCollectionContext';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
     Alert,
     FlatList,
+    SafeAreaView,
     StyleSheet,
     Text,
     TextInput,
@@ -86,14 +88,17 @@ export default function CustomerScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Customers</Text>
-        <TouchableOpacity style={styles.addButton} onPress={handleAddCustomer}>
-          <Text style={styles.addButtonText}>+</Text>
-        </TouchableOpacity>
-      </View>
+      <Header 
+        title="Customers" 
+        showBack={true}
+        onBackPress={() => router.replace('/')}
+        rightAction={{
+          icon: '+',
+          onPress: handleAddCustomer
+        }}
+      />
 
       {/* Search Bar */}
       <View style={styles.searchContainer}>
@@ -162,7 +167,7 @@ export default function CustomerScreen() {
         lines={lines}
         areas={areas}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 

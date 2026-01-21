@@ -5,6 +5,7 @@ import { StyleSheet, Text, TouchableOpacity, View, ViewStyle } from 'react-nativ
 interface HeaderProps {
   title: string;
   showBack?: boolean;
+  onBackPress?: () => void; // Custom back action
   rightAction?: {
     icon: string;
     onPress: () => void;
@@ -16,11 +17,20 @@ interface HeaderProps {
 export default function Header({
   title,
   showBack = false,
+  onBackPress,
   rightAction,
   subtitle,
   style,
 }: HeaderProps) {
   const router = useRouter();
+
+  const handleBackPress = () => {
+    if (onBackPress) {
+      onBackPress();
+    } else {
+      router.back();
+    }
+  };
 
   return (
     <View style={[styles.container, style]}>
@@ -28,7 +38,7 @@ export default function Header({
         {showBack && (
           <TouchableOpacity
             style={styles.backButton}
-            onPress={() => router.back()}
+            onPress={handleBackPress}
           >
             <Text style={styles.backIcon}>←</Text>
           </TouchableOpacity>

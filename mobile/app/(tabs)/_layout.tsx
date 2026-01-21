@@ -13,19 +13,19 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="collection"
         options={{
-          title: 'Collection',
+          title: 'Pocketor',
         }}
       />
       <Tabs.Screen
         name="customer"
         options={{
-          title: 'Customers',
+          title: 'Pocketor',
         }}
       />
       <Tabs.Screen
         name="loans"
         options={{
-          title: 'Loans',
+          title: 'Pocketor',
         }}
       />
     </Tabs>

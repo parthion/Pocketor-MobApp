@@ -1,0 +1,21 @@
+/* Hide Expo Router development navigation bar */
+body > div[data-expo-router-wrapper] > div:first-child {
+  display: none !important;
+}
+
+/* Hide navigation breadcrumb */
+nav[aria-label] {
+  display: none !important;
+}
+
+/* Hide any top navigation elements */
+body > div > div[style*="position"][style*="top: 0"] {
+  display: none !important;
+}
+
+/* Ensure app takes full height */
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
