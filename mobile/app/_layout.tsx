@@ -1,15 +1,28 @@
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { CollectionsProvider } from "@/context/CollectionsContext";
+import { LoanCollectionProvider } from "@/context/LoanCollectionContext";
 import { Stack } from "expo-router";
+import { Platform } from "react-native";
+
+// Import web-specific CSS to hide Expo dev navigation
+if (Platform.OS === 'web') {
+  require('./_layout.web.css');
+}
 
 function RootLayoutNav() {
   const { isLoggedIn } = useAuth();
 
   return (
-    <Stack>
+    <Stack
+      screenOptions={{
+        headerShown: false,
+        animation: 'none',
+      }}
+    >
       {isLoggedIn ? (
         <>
           <Stack.Screen name="index" options={{ headerShown: false }} />
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen
             name="collections/create"
             options={{
@@ -41,7 +54,9 @@ export default function RootLayout() {
   return (
     <AuthProvider>
       <CollectionsProvider>
-        <RootLayoutNav />
+        <LoanCollectionProvider>
+          <RootLayoutNav />
+        </LoanCollectionProvider>
       </CollectionsProvider>
     </AuthProvider>
   );

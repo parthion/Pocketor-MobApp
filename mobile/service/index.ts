@@ -11,6 +11,9 @@ export * from './auth.service';
 // Export all collections functions
 export * from './collections.service';
 
+// Export all loan collection functions
+export * from './loan-collection.service';
+
 // Export all types
 export * from './types';
 

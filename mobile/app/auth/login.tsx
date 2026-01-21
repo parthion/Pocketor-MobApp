@@ -12,21 +12,18 @@ import {
   View,
 } from 'react-native';
 
-type AuthMode = 'login' | 'register';
 type LoginType = 'email' | 'phone';
 
 export default function LoginScreen() {
-  const [authMode, setAuthMode] = useState<AuthMode>('login');
   const [loginType, setLoginType] = useState<LoginType>('email');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
 
-  const { login, loginWithPhone, register, validateEmail, validatePhone, validatePassword } = useAuth();
+  const { login, loginWithPhone, validateEmail, validatePhone } = useAuth();
   const router = useRouter();
 
   const handleLogin = async () => {
@@ -78,9 +75,7 @@ export default function LoginScreen() {
             {
               text: 'Register',
               onPress: () => {
-                setAuthMode('register');
-                setPassword('');
-                setErrors([]);
+                router.push('/auth/register');
               },
             },
           ]
@@ -96,81 +91,12 @@ export default function LoginScreen() {
     }
   };
 
-  const handleRegister = async () => {
-    // Reset errors
-    setErrors([]);
-
-    // Validate inputs
-    if (!name.trim()) {
-      setErrors(['Name is required']);
-      return;
-    }
-
-    if (!validateEmail(email)) {
-      setErrors(['Please enter a valid email address']);
-      return;
-    }
-
-    if (!phone.trim()) {
-      setErrors(['Phone number is required']);
-      return;
-    }
-
-    if (!validatePhone(phone)) {
-      setErrors(['Please enter a valid 10-digit phone number']);
-      return;
-    }
-
-    const passwordValidation = validatePassword(password);
-    if (!passwordValidation.valid) {
-      setErrors(passwordValidation.errors);
-      return;
-    }
-
-    if (!password.trim()) {
-      setErrors(['Password is required']);
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const result = await register(email, password, name, phone);
-
-      if (result.success) {
-        Alert.alert('Success', 'Account created! Verify your email and phone to complete registration.', [
-          {
-            text: 'OK',
-            onPress: () => {
-              // Navigate to OTP verification for email
-              router.push({
-                pathname: '/auth/otp',
-                params: { contact: email, type: 'email' },
-              });
-            },
-          },
-        ]);
-      } else {
-        setErrors([result.message]);
-      }
-    } catch (error) {
-      setErrors(['An unexpected error occurred']);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSwitchMode = () => {
-    setAuthMode(authMode === 'login' ? 'register' : 'login');
-    setEmail('');
-    setPhone('');
-    setPassword('');
-    setName('');
-    setErrors([]);
-    setLoginType('email');
-  };
-
   const handleForgotPassword = () => {
     router.push('/auth/forgot-password');
+  };
+
+  const handleNavigateToRegister = () => {
+    router.push('/auth/register');
   };
 
   return (
@@ -179,14 +105,8 @@ export default function LoginScreen() {
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.appName}>Pocketor</Text>
-          {/* <Text style={styles.title}>
-            {authMode === 'login' ? 'Welcome Back' : 'Create Account'}
-          </Text> */}
-          <Text style={styles.subtitle}>
-            {authMode === 'login'
-              ? 'Sign in to manage your Account'
-              : 'Join us to start with Pocketor'}
-          </Text>
+          <Text style={styles.title}>Welcome Back</Text>
+          <Text style={styles.subtitle}>Sign in to manage your Account</Text>
         </View>
 
         {/* Error Messages */}
@@ -203,65 +123,48 @@ export default function LoginScreen() {
 
         {/* Form Fields */}
         <View style={styles.form}>
-          {authMode === 'register' && (
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Full Name *</Text>
-              <TextInput
-                style={[styles.input, errors.length > 0 && styles.inputError]}
-                placeholder="Enter your full name"
-                placeholderTextColor="#999"
-                value={name}
-                onChangeText={setName}
-                editable={!loading}
-                autoCapitalize="words"
-              />
-            </View>
-          )}
-
-          {/* Login Type Selector (only for login mode) */}
-          {authMode === 'login' && (
-            <View style={styles.loginTypeContainer}>
-              <TouchableOpacity
-                style={[styles.loginTypeButton, loginType === 'email' && styles.loginTypeActive]}
-                onPress={() => {
-                  setLoginType('email');
-                  setPhone('');
-                  setErrors([]);
-                }}
-                disabled={loading}
+          {/* Login Type Selector */}
+          <View style={styles.loginTypeContainer}>
+            <TouchableOpacity
+              style={[styles.loginTypeButton, loginType === 'email' && styles.loginTypeActive]}
+              onPress={() => {
+                setLoginType('email');
+                setPhone('');
+                setErrors([]);
+              }}
+              disabled={loading}
+            >
+              <Text
+                style={[
+                  styles.loginTypeText,
+                  loginType === 'email' && styles.loginTypeTextActive,
+                ]}
               >
-                <Text
-                  style={[
-                    styles.loginTypeText,
-                    loginType === 'email' && styles.loginTypeTextActive,
-                  ]}
-                >
-                  ✉️ Email
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.loginTypeButton, loginType === 'phone' && styles.loginTypeActive]}
-                onPress={() => {
-                  setLoginType('phone');
-                  setEmail('');
-                  setErrors([]);
-                }}
-                disabled={loading}
+                ✉️ Email
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.loginTypeButton, loginType === 'phone' && styles.loginTypeActive]}
+              onPress={() => {
+                setLoginType('phone');
+                setEmail('');
+                setErrors([]);
+              }}
+              disabled={loading}
+            >
+              <Text
+                style={[
+                  styles.loginTypeText,
+                  loginType === 'phone' && styles.loginTypeTextActive,
+                ]}
               >
-                <Text
-                  style={[
-                    styles.loginTypeText,
-                    loginType === 'phone' && styles.loginTypeTextActive,
-                  ]}
-                >
-                  📱 Phone
-                </Text>
-              </TouchableOpacity>
-            </View>
-          )}
+                📱 Phone
+              </Text>
+            </TouchableOpacity>
+          </View>
 
           {/* Email Input */}
-          {authMode === 'register' || loginType === 'email' ? (
+          {loginType === 'email' && (
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Email Address *</Text>
               <TextInput
@@ -275,16 +178,11 @@ export default function LoginScreen() {
                 autoCapitalize="none"
                 autoCorrect={false}
               />
-              {/* <Text style={styles.hint}>
-                {authMode === 'login'
-                  ? 'We will verify if your account exists'
-                  : 'You will use this to login'}
-              </Text> */}
             </View>
-          ) : null}
+          )}
 
           {/* Phone Input */}
-          {(authMode === 'register' || loginType === 'phone') && (
+          {loginType === 'phone' && (
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Phone Number *</Text>
               <TextInput
@@ -301,22 +199,17 @@ export default function LoginScreen() {
                 keyboardType="phone-pad"
                 maxLength={10}
               />
-              <Text style={styles.hint}>
-                {authMode === 'register'
-                  ? '10-digit number (required for verification)'
-                  : '10-digit number for verification'}
-              </Text>
+              <Text style={styles.hint}>10-digit number for verification</Text>
             </View>
           )}
 
+          {/* Password Input */}
           <View style={styles.inputGroup}>
             <View style={styles.passwordLabelContainer}>
               <Text style={styles.label}>Password *</Text>
-              {authMode === 'login' && (
-                <TouchableOpacity onPress={handleForgotPassword} disabled={loading}>
-                  <Text style={styles.forgotPasswordLink}>Forgot?</Text>
-                </TouchableOpacity>
-              )}
+              <TouchableOpacity onPress={handleForgotPassword} disabled={loading}>
+                <Text style={styles.forgotPasswordLink}>Forgot?</Text>
+              </TouchableOpacity>
             </View>
             <View style={styles.passwordContainer}>
               <TextInput
@@ -336,38 +229,27 @@ export default function LoginScreen() {
                 <Text style={styles.eyeIcon}>{showPassword ? '👁️' : '👁️‍🗨️'}</Text>
               </TouchableOpacity>
             </View>
-            {authMode === 'register' && (
-              <Text style={styles.hint}>
-                Minimum 6 characters with uppercase, lowercase, and numbers
-              </Text>
-            )}
           </View>
         </View>
 
-        {/* Action Button */}
+        {/* Login Button */}
         <TouchableOpacity
           style={[styles.button, loading && styles.buttonDisabled]}
-          onPress={authMode === 'login' ? handleLogin : handleRegister}
+          onPress={handleLogin}
           disabled={loading}
         >
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.buttonText}>
-              {authMode === 'login' ? 'Sign In' : 'Create Account'}
-            </Text>
+            <Text style={styles.buttonText}>Sign In</Text>
           )}
         </TouchableOpacity>
 
-        {/* Switch Mode Link */}
+        {/* Register Link */}
         <View style={styles.switchContainer}>
-          <Text style={styles.switchText}>
-            {authMode === 'login' ? "Don't have an account? " : 'Already have an account? '}
-          </Text>
-          <TouchableOpacity onPress={handleSwitchMode} disabled={loading}>
-            <Text style={styles.switchLink}>
-              {authMode === 'login' ? 'Register' : 'Login'}
-            </Text>
+          <Text style={styles.switchText}>Don't have an account? </Text>
+          <TouchableOpacity onPress={handleNavigateToRegister} disabled={loading}>
+            <Text style={styles.switchLink}>Register</Text>
           </TouchableOpacity>
         </View>
 
