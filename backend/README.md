@@ -1,331 +1,134 @@
-# Pocketor Backend - Setup & Run Guide
+# Pocketor Backend
 
-## ✅ All Files Created!
+## Setup
 
-Your backend folder now contains all the required files:
-
-```
-backend/
-├── config/
-│   ├── database.js          ✅ MySQL connection
-│   └── constants.js         ✅ Enums & constants
-├── models/
-│   ├── User.js              ✅ User entity
-│   └── Collection.js        ✅ Collection entity
-├── dto/
-│   └── UserDTO.js           ✅ Data transfer objects
-├── repositories/
-│   ├── UserRepository.js    ✅ User database operations
-│   └── CollectionRepository.js ✅ Collection database operations
-├── routes/
-│   ├── authRoutes.js        ✅ Authentication endpoints
-│   └── collectionRoutes.js  ✅ Collection endpoints
-├── middleware/
-│   └── authMiddleware.js    ✅ JWT & validation
-├── server.js                ✅ Main entry point
-├── package.json             ✅ Dependencies
-├── .env                     ✅ Configuration
-├── .env.example             ✅ Example config
-├── .gitignore               ✅ Git rules
-└── VERIFY_SETUP.sh          ✅ Verification script
-```
-
----
-
-## 🚀 Quick Start (5 Steps)
-
-### Step 1: Install Dependencies
 ```bash
 cd backend
 npm install
+cp .env.example .env   # fill in your values
 ```
 
-You should see:
-```
-added 125 packages in 45s
-```
+---
 
-### Step 2: Create MySQL Database
+## Database Migrations
 
-```bash
-# Connect to MySQL
-mysql -u root -p
+Run in order inside MySQL Workbench (or `mysql` CLI):
 
-# Inside MySQL, run:
-CREATE DATABASE pocketor_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER 'pocketor_user'@'localhost' IDENTIFIED BY 'pocketor_secure_123';
-GRANT ALL PRIVILEGES ON pocketor_db.* TO 'pocketor_user'@'localhost';
-FLUSH PRIVILEGES;
-EXIT;
+```sql
+SOURCE database/schema.sql;
+SOURCE database/loan-collections-schema.sql;
+SOURCE database/migrations/001_product_configs.sql;
+SOURCE database/migrations/002_payments_gateway.sql;
 ```
 
-### Step 3: Import Database Schema
-
-```bash
-# From your project root
-mysql -u pocketor_user -p pocketor_db < database/schema.sql
-
-# Enter password: pocketor_secure_123
-```
-
-Verify tables were created:
-```bash
-mysql -u pocketor_user -p pocketor_db
+To verify:
+```sql
 SHOW TABLES;
-# Should show 6 tables
-EXIT;
-```
-
-### Step 4: Update .env File
-
-Check your `.backend/.env` file has:
-```
-DATABASE_HOST=localhost
-DATABASE_PORT=3306
-DATABASE_USER=pocketor_user
-DATABASE_PASSWORD=pocketor_secure_123
-DATABASE_NAME=pocketor_db
-PORT=3000
-JWT_SECRET=your_super_secret_jwt_key_change_this_in_production
-NODE_ENV=development
-```
-
-### Step 5: Start the Server
-
-```bash
-npm start
-
-# You should see:
-# ✅ MySQL Database Connected Successfully!
-# 📍 Server running on http://localhost:3000
+-- Should include: product_configs, feature_flags, ledger_entries, gateway_payments
 ```
 
 ---
 
-## 🧪 Test the Server
+## Adding a Sample Product Config
 
-### Test 1: Health Check
-```bash
-curl http://localhost:3000/api/health
+1. Start the server: `npm start`
+2. Login to get a JWT token:
+   ```
+   POST /api/auth/login  { email, password }
+   ```
+3. Create a config (paste the contents of `database/sample-product-config.json`):
+   ```
+   POST /api/product-configs
+   Authorization: Bearer <token>
+   Body: { "name": "Daily Loan - Standard", "json_schema": { ... } }
+   ```
+4. Approve it:
+   ```
+   POST /api/product-configs/:id/approve
+   ```
+
+---
+
+## Testing the Calc Endpoint
+
 ```
-
-Response:
-```json
+POST /api/product-configs/:id/calc
+Authorization: Bearer <token>
 {
-  "status": "Server is running",
-  "timestamp": "2026-01-03T...",
-  "environment": "development"
+  "principal": 10000,
+  "noOfInstalls": 100,
+  "interestPerHundred": 20,
+  "lineType": "Daily",
+  "startDate": "2026-01-10"
 }
 ```
 
-### Test 2: Database Health
-```bash
-curl http://localhost:3000/api/db-health
-```
-
-Response:
+Expected summary output:
 ```json
 {
-  "status": "Database is connected",
-  "database": "pocketor_db",
-  "timestamp": "2026-01-03T..."
-}
-```
-
-### Test 3: User Registration
-```bash
-curl -X POST http://localhost:3000/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "test@example.com",
-    "name": "Test User",
-    "phone": "9876543210",
-    "password": "password123",
-    "passwordConfirm": "password123"
-  }'
-```
-
-Response:
-```json
-{
-  "success": true,
-  "message": "User registered successfully",
-  "data": {
-    "userId": "uuid-here",
-    "email": "test@example.com",
-    "name": "Test User"
-  }
-}
-```
-
-### Test 4: User Login
-```bash
-curl -X POST http://localhost:3000/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "test@example.com",
-    "password": "password123"
-  }'
-```
-
-Response:
-```json
-{
-  "success": true,
-  "message": "Login successful",
-  "data": {
-    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "user": {
-      "id": "uuid-here",
-      "email": "test@example.com",
-      "name": "Test User",
-      "phone": "9876543210"
-    }
-  }
+  "principal": 10000,
+  "interestModel": "flat",
+  "totalInterest": 2000,
+  "processingFee": 100,
+  "totalAmount": 12100,
+  "installmentAmount": 120,
+  "installments": 100,
+  "lineType": "daily"
 }
 ```
 
 ---
 
-## 📱 Connect Mobile App to Backend
+## Testing Payment Webhooks Locally
 
-Update `mobile/service/config.ts`:
+1. Set `PAYMENT_PROVIDER=razorpay` and fill in `RAZORPAY_*` env vars (use test keys from Razorpay dashboard).
+2. Expose local server with [ngrok](https://ngrok.com/):
+   ```bash
+   ngrok http 3000
+   ```
+3. Set the ngrok URL as Razorpay webhook URL: `https://<ngrok-id>.ngrok.io/api/payments/webhook`
+4. Trigger a test payment in Razorpay test dashboard.
+5. Check `gateway_payments` and `ledger_entries` tables for updates.
 
-```typescript
-export const API_CONFIG = {
-  baseURL: 'http://localhost:3000/api',
-  timeout: 10000,
-};
+---
+
+## Rolling Back a Config
+
+```
+POST /api/product-configs/:id/archive
+```
+Then re-activate a previous version by creating a new config with the old `json_schema`.
+
+---
+
+## Feature Flags
+
+Enable product configs or payment gateway per user directly in DB:
+
+```sql
+UPDATE feature_flags
+SET enabled = TRUE
+WHERE user_id = '<user-id>' AND flag_key = 'product_configs_enabled';
 ```
 
-Or update `mobile/.env.local`:
-```
-EXPO_PUBLIC_API_URL=http://localhost:3000/api
-```
+---
+
+## Sandbox Formula Safety
+
+`calcService.js` uses a hand-rolled recursive-descent AST parser.
+Only arithmetic operators (`+`, `-`, `*`, `/`, `%`, `**`) and a whitelist of
+`Math` functions (`floor`, `ceil`, `round`, `abs`, `min`, `max`, `pow`, `sqrt`)
+are allowed. `eval`, `new Function`, and `vm` are **not used**.
 
 ---
 
-## 🚀 Development Mode (Auto-reload)
+## Recommended Payment Providers by Region
 
-For automatic server restart on file changes:
+| Region        | Provider              | Notes                            |
+|---------------|-----------------------|----------------------------------|
+| India         | **Razorpay** ✅ (default) | Easy sandbox, UPI, cards, NetBanking |
+| Africa        | Paystack / Flutterwave | Paystack simpler for Nigeria/Ghana  |
+| Global/EU     | Stripe                | Best docs, 3DS2 built-in         |
+| South Asia    | Razorpay / Stripe     | Both supported                   |
 
-```bash
-npm run dev
-
-# Uses nodemon - server restarts when you save files
-```
-
----
-
-## 📝 Available Endpoints
-
-### Auth Endpoints
-- `POST   /api/auth/register` - Register new user
-- `POST   /api/auth/login` - Login user
-- `GET    /api/auth/me` - Get current user (requires token)
-- `POST   /api/auth/logout` - Logout (requires token)
-
-### Collection Endpoints
-- `GET    /api/collections` - Get all collections (requires token)
-- `POST   /api/collections` - Create collection (requires token)
-- `GET    /api/collections/:id` - Get collection by ID (requires token)
-- `PUT    /api/collections/:id` - Update collection (requires token)
-- `DELETE /api/collections/:id` - Delete collection (requires token)
-- `GET    /api/collections/status/:status` - Get by status (requires token)
-
-### Health Endpoints
-- `GET    /api/health` - Server health check
-- `GET    /api/db-health` - Database connection check
-
----
-
-## ✨ Features Included
-
-✅ User Registration with Password Hashing  
-✅ User Login with JWT Tokens  
-✅ Protected Routes (requires JWT token)  
-✅ MySQL Database Integration  
-✅ CRUD Operations for Collections  
-✅ Error Handling  
-✅ Input Validation  
-✅ CORS Support  
-✅ Environment Configuration  
-
----
-
-## 🐛 Troubleshooting
-
-### "Can't connect to database"
-- Check MySQL is running: `mysql -u root -p`
-- Check database exists: `SHOW DATABASES;`
-- Check credentials in `.env` are correct
-- Make sure `pocketor_db` exists
-
-### "Port 3000 is already in use"
-```bash
-# Change port in .env
-PORT=3001
-
-# Or kill the process using port 3000
-# macOS: lsof -i :3000 | grep LISTEN | awk '{print $2}' | xargs kill
-# Linux: sudo fuser -k 3000/tcp
-```
-
-### "JWT_SECRET not set"
-- Check `.env` file has `JWT_SECRET` defined
-- Don't commit `.env` to git (use `.env.example` as template)
-
-### Token Expired
-- Tokens expire after 24 hours
-- Mobile app should handle token refresh
-- Use login endpoint to get new token
-
----
-
-## 📚 File Explanations
-
-| File | Purpose |
-|------|---------|
-| `config/database.js` | MySQL connection pool (like DbContext in .NET) |
-| `config/constants.js` | Enums & constants (like Enums in .NET) |
-| `models/User.js` | User entity (like Entity in .NET) |
-| `dto/UserDTO.js` | Data transfer objects (like DTO in .NET) |
-| `repositories/UserRepository.js` | Database operations (like Repository in .NET) |
-| `routes/authRoutes.js` | API endpoints (like Controller in .NET) |
-| `middleware/authMiddleware.js` | JWT validation (like AuthAttribute in .NET) |
-| `server.js` | Main entry point (like Program.cs in .NET) |
-
----
-
-## ✅ Verification Checklist
-
-- [ ] All files created in backend folder
-- [ ] MySQL database created
-- [ ] `.env` file updated with correct credentials
-- [ ] `npm install` completed
-- [ ] Database schema imported
-- [ ] Server starts without errors
-- [ ] `npm start` shows "Server running on http://localhost:3000"
-- [ ] `/api/health` endpoint responds
-- [ ] Can register new user
-- [ ] Can login and get JWT token
-- [ ] Mobile app can connect to backend
-
----
-
-## 🎉 You're Ready!
-
-Your backend is now ready to serve your Pocketor mobile app!
-
-**Next Steps:**
-1. Keep backend running: `npm start`
-2. Open another terminal
-3. Start mobile app: `cd mobile && npm start`
-4. Both will communicate with each other
-
----
-
-**Created**: January 3, 2026  
-**Status**: ✅ COMPLETE  
-**Ready to Use**: ✅ YES
-
+To switch provider: set `PAYMENT_PROVIDER=stripe` in `.env` and add `STRIPE_*` keys.

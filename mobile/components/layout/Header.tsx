@@ -1,70 +1,53 @@
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface HeaderProps {
   title: string;
   showBack?: boolean;
-  onBackPress?: () => void; // Custom back action
-  rightAction?: {
-    icon: string;
-    onPress: () => void;
-  };
+  onBackPress?: () => void;
+  rightAction?: { icon: string; onPress: () => void; };
   subtitle?: string;
   style?: ViewStyle;
+  transparent?: boolean;
 }
 
 export default function Header({
-  title,
-  showBack = false,
-  onBackPress,
-  rightAction,
-  subtitle,
-  style,
+  title, showBack = false, onBackPress, rightAction, subtitle, style, transparent = false,
 }: HeaderProps) {
-  const router = useRouter();
+  const router   = useRouter();
+  const insets   = useSafeAreaInsets();
 
   const handleBackPress = () => {
-    if (onBackPress) {
-      onBackPress();
-    } else {
-      router.back();
-    }
+    if (onBackPress) onBackPress();
+    else router.back();
   };
 
   return (
-    <View style={[styles.container, style]}>
+    <View style={[
+      styles.container,
+      transparent && styles.transparent,
+      { paddingTop: insets.top },
+      style,
+    ]}>
       <View style={styles.content}>
-        {showBack && (
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={handleBackPress}
-          >
-            <Text style={styles.backIcon}>←</Text>
+        {showBack ? (
+          <TouchableOpacity style={styles.sideBtn} onPress={handleBackPress}>
+            <Text style={[styles.backIcon, transparent && styles.iconLight]}>←</Text>
           </TouchableOpacity>
-        )}
+        ) : <View style={styles.sideBtn} />}
 
         <View style={styles.titleContainer}>
-          <Text style={styles.title} numberOfLines={1}>
-            {title}
-          </Text>
-          {subtitle && (
-            <Text style={styles.subtitle} numberOfLines={1}>
-              {subtitle}
-            </Text>
-          )}
+          <Text style={[styles.title, transparent && styles.titleLight]} numberOfLines={1}>{title}</Text>
+          {subtitle && <Text style={[styles.subtitle, transparent && styles.titleLight]} numberOfLines={1}>{subtitle}</Text>}
         </View>
 
         {rightAction ? (
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={rightAction.onPress}
-          >
-            <Text style={styles.actionIcon}>{rightAction.icon}</Text>
+          <TouchableOpacity style={styles.sideBtn} onPress={rightAction.onPress}>
+            <Text style={[styles.actionIcon, transparent && styles.iconLight]}>{rightAction.icon}</Text>
           </TouchableOpacity>
-        ) : (
-          showBack && <View style={styles.placeholder} />
-        )}
+        ) : <View style={styles.sideBtn} />}
       </View>
     </View>
   );
@@ -74,56 +57,59 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
+    borderBottomColor: '#EBEBEB',
+  },
+  transparent: {
+    backgroundColor: 'transparent',
+    borderBottomWidth: 0,
   },
   content: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    minHeight: 56,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    minHeight: 52,
   },
-  backButton: {
+  sideBtn: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F5F5F5',
   },
   backIcon: {
-    fontSize: 24,
-    color: '#007AFF',
+    fontSize: 22,
+    color: '#1B4F72',
+    fontWeight: '700',
+  },
+  iconLight: {
+    color: '#fff',
   },
   titleContainer: {
     flex: 1,
-    marginHorizontal: 12,
+    marginHorizontal: 8,
   },
   title: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700',
-    color: '#1C1C1E',
+    color: '#1B4F72',
     textAlign: 'center',
+    letterSpacing: 0.3,
+  },
+  titleLight: {
+    color: '#fff',
   },
   subtitle: {
-    fontSize: 13,
-    color: '#666',
+    fontSize: 12,
+    color: '#888',
     textAlign: 'center',
-    marginTop: 2,
-  },
-  actionButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F5F5F5',
+    marginTop: 1,
   },
   actionIcon: {
-    fontSize: 20,
-  },
-  placeholder: {
-    width: 40,
+    fontSize: 22,
+    color: '#1B4F72',
+    fontWeight: '700',
+    textAlign: 'center',
   },
 });

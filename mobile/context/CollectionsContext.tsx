@@ -36,7 +36,6 @@ export const CollectionsProvider: React.FC<{ children: ReactNode }> = ({ childre
       console.log('User logged in, refreshing collections...');
       refreshCollections();
     } else {
-      // Clear collections when logged out
       setCollections([]);
     }
   }, [isLoggedIn]);

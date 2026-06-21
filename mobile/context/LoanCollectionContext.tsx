@@ -31,7 +31,12 @@ interface LoanCollectionContextType {
   updateLoan: (id: string, loan: any) => Promise<void>;
   deleteLoan: (id: string) => Promise<void>;
   refreshLoans: () => Promise<void>;
-  
+
+  // Payments
+  payments: any[];
+  recordPayment: (payment: any) => Promise<any>;
+  refreshPayments: () => Promise<void>;
+
   // Loading states
   isLoading: boolean;
 }
@@ -44,6 +49,7 @@ export function LoanCollectionProvider({ children }: { children: ReactNode }) {
   const [areas, setAreas] = useState<Area[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loans, setLoans] = useState<any[]>([]);
+  const [payments, setPayments] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   // Fetch all data when user logs in
@@ -69,6 +75,7 @@ export function LoanCollectionProvider({ children }: { children: ReactNode }) {
         refreshAreas(),
         refreshCustomers(),
         refreshLoans(),
+        refreshPayments(),
       ]);
     } catch (error) {
       console.error('Error loading data:', error);
@@ -293,6 +300,41 @@ export function LoanCollectionProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // ===== PAYMENT OPERATIONS =====
+  const refreshPayments = async () => {
+    try {
+      // load payments for all loans
+      const allPayments: any[] = [];
+      for (const loan of loans) {
+        const res = await loanCollectionService.getPaymentsByLoan(loan.id);
+        if (res.success && res.data) allPayments.push(...res.data);
+      }
+      setPayments(allPayments);
+    } catch (error) {
+      console.error('Error refreshing payments:', error);
+    }
+  };
+
+  const recordPayment = async (paymentData: any) => {
+    try {
+      const response = await loanCollectionService.recordPayment(paymentData);
+      if (response.success && response.data) {
+        setPayments((prev) => [response.data, ...prev]);
+        // Update loan balance locally
+        setLoans((prev) => prev.map((l) =>
+          l.id === paymentData.loanId
+            ? { ...l, paidAmount: (l.paidAmount || 0) + paymentData.amount, balanceAmount: (l.balanceAmount || 0) - paymentData.amount }
+            : l
+        ));
+        return response.data;
+      }
+      throw new Error(response.message || 'Failed to record payment');
+    } catch (error) {
+      console.error('Error recording payment:', error);
+      throw error;
+    }
+  };
+
   return (
     <LoanCollectionContext.Provider
       value={{
@@ -316,6 +358,9 @@ export function LoanCollectionProvider({ children }: { children: ReactNode }) {
         updateLoan,
         deleteLoan,
         refreshLoans,
+        payments,
+        recordPayment,
+        refreshPayments,
         isLoading,
       }}
     >

@@ -75,4 +75,32 @@ module.exports = {
     MAX_ATTEMPTS: 5,
     CODE_LENGTH: 6,
   },
+
+  // Product Config Status
+  PRODUCT_CONFIG_STATUS: {
+    DRAFT:    'draft',
+    ACTIVE:   'active',
+    ARCHIVED: 'archived',
+  },
+
+  // Gateway Payment Status
+  GATEWAY_PAYMENT_STATUS: {
+    INITIATED: 'initiated',
+    PENDING:   'pending',
+    SUCCESS:   'success',
+    FAILED:    'failed',
+    REFUNDED:  'refunded',
+  },
+
+  // Ledger Entry Types
+  LEDGER_ENTRY_TYPE: {
+    DEBIT:  'debit',
+    CREDIT: 'credit',
+  },
+
+  // Feature Flags
+  FEATURE_FLAGS: {
+    PRODUCT_CONFIGS_ENABLED:  'product_configs_enabled',
+    PAYMENT_GATEWAY_ENABLED:  'payment_gateway_enabled',
+  },
 };

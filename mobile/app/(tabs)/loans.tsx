@@ -3,10 +3,10 @@ import Header from '@/components/layout/Header';
 import { useLoanCollection } from '@/context/LoanCollectionContext';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import {
     Alert,
     FlatList,
-    SafeAreaView,
     StyleSheet,
     Text,
     TextInput,

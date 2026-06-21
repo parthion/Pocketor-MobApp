@@ -10,24 +10,12 @@ export default function TabsLayout() {
         },
       }}
     >
-      <Tabs.Screen
-        name="collection"
-        options={{
-          title: 'Pocketor',
-        }}
-      />
-      <Tabs.Screen
-        name="customer"
-        options={{
-          title: 'Pocketor',
-        }}
-      />
-      <Tabs.Screen
-        name="loans"
-        options={{
-          title: 'Pocketor',
-        }}
-      />
+      <Tabs.Screen name="collection" options={{ title: 'Pocketor' }} />
+      <Tabs.Screen name="customer" options={{ title: 'Pocketor' }} />
+      <Tabs.Screen name="loans" options={{ title: 'Pocketor' }} />
+      <Tabs.Screen name="expense" options={{ title: 'Pocketor' }} />
+      <Tabs.Screen name="reports" options={{ title: 'Pocketor' }} />
+      <Tabs.Screen name="settings" options={{ title: 'Pocketor' }} />
     </Tabs>
   );
 }

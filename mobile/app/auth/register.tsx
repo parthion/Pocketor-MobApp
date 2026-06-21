@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type RegistrationStep = 'details' | 'otp' | 'complete';
 
@@ -25,9 +26,12 @@ export default function RegisterScreen() {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
   const [generatedOtp, setGeneratedOtp] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const { register, validateEmail, validatePhone, validatePassword, sendOTP, verifyOTP } = useAuth();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   // Validate email domain
   const validateEmailDomain = (email: string): boolean => {
@@ -204,7 +208,7 @@ export default function RegisterScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+    <ScrollView style={styles.container} contentContainerStyle={[styles.contentContainer, { paddingTop: insets.top }]}>
       <View style={styles.content}>
         {/* Header */}
         <View style={styles.header}>
@@ -272,15 +276,20 @@ export default function RegisterScreen() {
               {/* Password */}
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Password *</Text>
-                <TextInput
-                  style={styles.input}
-                  value={password}
-                  onChangeText={setPassword}
-                  placeholder="Enter your password"
-                  placeholderTextColor="#999"
-                  secureTextEntry
-                  autoCapitalize="none"
-                />
+                <View style={styles.passwordContainer}>
+                  <TextInput
+                    style={styles.passwordInput}
+                    value={password}
+                    onChangeText={setPassword}
+                    placeholder="Enter your password"
+                    placeholderTextColor="#999"
+                    secureTextEntry={!showPassword}
+                    autoCapitalize="none"
+                  />
+                  <TouchableOpacity onPress={() => setShowPassword(!showPassword)} disabled={loading}>
+                    <Text style={styles.eyeIcon}>{showPassword ? '👁️' : '👁️‍🗨️'}</Text>
+                  </TouchableOpacity>
+                </View>
                 <Text style={styles.hint}>
                   Minimum 6 characters with uppercase, lowercase, and numbers
                 </Text>
@@ -289,15 +298,20 @@ export default function RegisterScreen() {
               {/* Confirm Password */}
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Confirm Password *</Text>
-                <TextInput
-                  style={styles.input}
-                  value={confirmPassword}
-                  onChangeText={setConfirmPassword}
-                  placeholder="Re-enter password"
-                  placeholderTextColor="#999"
-                  secureTextEntry
-                  autoCapitalize="none"
-                />
+                <View style={styles.passwordContainer}>
+                  <TextInput
+                    style={styles.passwordInput}
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                    placeholder="Re-enter password"
+                    placeholderTextColor="#999"
+                    secureTextEntry={!showConfirmPassword}
+                    autoCapitalize="none"
+                  />
+                  <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)} disabled={loading}>
+                    <Text style={styles.eyeIcon}>{showConfirmPassword ? '👁️' : '👁️‍🗨️'}</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
 
               {/* Next Button */}
@@ -595,5 +609,25 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#007AFF',
     fontWeight: '600',
+  },
+  passwordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    backgroundColor: '#fff',
+    paddingRight: 10,
+  },
+  passwordInput: {
+    flex: 1,
+    height: 48,
+    paddingHorizontal: 14,
+    fontSize: 14,
+    color: '#333',
+  },
+  eyeIcon: {
+    fontSize: 18,
+    padding: 8,
   },
 });
