@@ -66,14 +66,19 @@ app.get('/api/db-health', async (req, res) => {
 });
 
 // Import route handlers
-const authRoutes = require('./routes/authRoutes');
-const collectionRoutes = require('./routes/collectionRoutes');
-const loanCollectionRoutes = require('./routes/loanCollectionRoutes');
+const authRoutes            = require('./routes/authRoutes');
+const collectionRoutes      = require('./routes/collectionRoutes');
+const loanCollectionRoutes  = require('./routes/loanCollectionRoutes');
+const productConfigRoutes   = require('./routes/productConfigRoutes');
+const paymentsGatewayRoutes = require('./routes/paymentsGatewayRoutes');
 
-// Mount routes
-app.use('/api/auth', authRoutes);
-app.use('/api/collections', collectionRoutes);
+// Mount routes — existing routes unchanged
+app.use('/api/auth',            authRoutes);
+app.use('/api/collections',     collectionRoutes);
 app.use('/api/loan-collections', loanCollectionRoutes);
+// New additive namespaces
+app.use('/api/product-configs', productConfigRoutes);
+app.use('/api/payments',        paymentsGatewayRoutes);
 
 // ============= ERROR HANDLING =============
 
@@ -126,6 +131,11 @@ app.listen(PORT, () => {
   console.log('  • DELETE /api/collections/:id (protected)');
   console.log('  • Loan Collections: /api/loan-collections/* (protected)');
   console.log('    - Lines, Areas, Customers, Loans, Payments');
+  console.log('  • Product Configs:  /api/product-configs/* (protected)');
+  console.log('    - CRUD, POST /:id/approve, POST /:id/archive, POST /:id/calc');
+  console.log('    - GET  /ledger/entries');
+  console.log('  • Payments Gateway: /api/payments/* ');
+  console.log('    - POST /initiate (protected), POST /webhook (public+signed)');
   console.log('\n✅ Ready to receive requests!\n');
 });
 

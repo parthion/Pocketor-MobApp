@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type LoginType = 'email' | 'phone';
 
@@ -25,6 +26,7 @@ export default function LoginScreen() {
 
   const { login, loginWithPhone, validateEmail, validatePhone } = useAuth();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   const handleLogin = async () => {
     // Reset errors
@@ -100,12 +102,14 @@ export default function LoginScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+    <ScrollView style={styles.container} contentContainerStyle={[styles.contentContainer, { paddingTop: insets.top }]}>
       <View style={styles.content}>
         {/* Header */}
         <View style={styles.header}>
+          <View style={styles.logoContainer}>
+            <Text style={styles.logoIcon}>💰</Text>
+          </View>
           <Text style={styles.appName}>Pocketor</Text>
-          <Text style={styles.title}>Welcome Back</Text>
           <Text style={styles.subtitle}>Sign in to manage your Account</Text>
         </View>
 
@@ -253,15 +257,12 @@ export default function LoginScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Info Box */}
-        <View style={styles.infoBox}>
-          <Text style={styles.infoTitle}>ℹ️ How it works:</Text>
-          <Text style={styles.infoText}>
-            • First time? Create a new account{'\n'}
-            • Returning user? Sign in with your credentials{'\n'}
-            • Verify your email & phone for security{'\n'}
-            • Forgot password? Use the reset option
-          </Text>
+        {/* Support + Version */}
+        <View style={styles.footer}>
+          <TouchableOpacity onPress={() => router.push('/auth/forgot-password')}>
+            <Text style={styles.supportText}>Support</Text>
+          </TouchableOpacity>
+          <Text style={styles.versionText}>v1.0.0</Text>
         </View>
       </View>
     </ScrollView>
@@ -283,18 +284,28 @@ const styles = StyleSheet.create({
   header: {
     marginBottom: 30,
     marginTop: 20,
+    alignItems: 'center',
+  },
+  logoContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#E8F4FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+    borderWidth: 2,
+    borderColor: '#007AFF',
+  },
+  logoIcon: {
+    fontSize: 40,
   },
   appName: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#007AFF',
-    marginBottom: 12,
-  },
-  title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 8,
+    color: '#007AFF',
+    letterSpacing: 1,
+    marginBottom: 6,
   },
   subtitle: {
     fontSize: 14,
@@ -452,22 +463,22 @@ const styles = StyleSheet.create({
     color: '#007AFF',
     fontWeight: '600',
   },
-  infoBox: {
-    backgroundColor: '#E8F4FF',
-    borderRadius: 8,
-    padding: 12,
-    borderLeftWidth: 4,
-    borderLeftColor: '#007AFF',
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 32,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
   },
-  infoTitle: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#0066CC',
-    marginBottom: 6,
+  supportText: {
+    fontSize: 14,
+    color: '#007AFF',
+    fontWeight: '500',
   },
-  infoText: {
-    fontSize: 12,
-    color: '#0066CC',
-    lineHeight: 18,
+  versionText: {
+    fontSize: 13,
+    color: '#999',
   },
 });

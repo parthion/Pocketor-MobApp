@@ -1,0 +1,46 @@
+{
+  "name": "Daily Loan - Standard",
+  "json_schema": {
+    "fields": [
+      { "key": "principal",        "label": "Principal Amount (₹)", "type": "number",  "required": true,  "defaultValue": 10000 },
+      { "key": "noOfInstalls",     "label": "Number of Installments","type": "number",  "required": true,  "defaultValue": 100 },
+      { "key": "interestPerHundred","label": "Interest per ₹100",   "type": "number",  "required": true,  "defaultValue": 20 },
+      { "key": "lineType",         "label": "Collection Frequency", "type": "select",  "required": true,
+        "options": ["Daily","Weekly","Monthly"],                                          "defaultValue": "Daily" },
+      { "key": "startDate",        "label": "Loan Start Date",      "type": "date",    "required": true }
+    ],
+    "defaults": {
+      "currency": "INR",
+      "lineType": "Daily",
+      "noOfInstalls": 100,
+      "interestPerHundred": 20
+    },
+    "calculation": {
+      "interestModel": "flat",
+      "formulas": {
+        "totalInterest":  "principal * interestPerHundred / 100",
+        "processingFee":  "principal * 1 / 100"
+      }
+    },
+    "fees": {
+      "processingFeePercent": 1,
+      "description": "1% of principal, collected upfront"
+    },
+    "penalties": {
+      "ratePercent": 2,
+      "description": "2% of outstanding balance if payment missed"
+    },
+    "repaymentRules": {
+      "allowPartialPayment": true,
+      "autoCloseLoanOnFullPayment": true,
+      "badLoanThresholdDays": 30
+    },
+    "uiSchema": {
+      "order": ["principal","noOfInstalls","interestPerHundred","lineType","startDate"],
+      "hints": {
+        "principal":         "Enter amount to lend",
+        "interestPerHundred":"e.g. 20 means ₹20 interest per ₹100 lent"
+      }
+    }
+  }
+}

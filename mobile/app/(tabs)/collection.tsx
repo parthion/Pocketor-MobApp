@@ -5,12 +5,12 @@ import { useLoanCollection } from '@/context/LoanCollectionContext';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import {
     Alert,
     FlatList,
     Modal,
     Platform,
-    SafeAreaView,
     ScrollView,
     StyleSheet,
     Text,
@@ -160,8 +160,8 @@ export default function CollectionScreen() {
               >
                 <Text style={styles.icon}>▼</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.searchButton} onPress={handleSearchArea}>
-                <Text style={styles.searchIcon}>🔍</Text>
+              <TouchableOpacity style={styles.addButton} onPress={handleSearchArea}>
+                <Text style={styles.addButtonText}>+</Text>
               </TouchableOpacity>
             </View>
           </View>
