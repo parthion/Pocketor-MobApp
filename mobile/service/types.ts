@@ -22,6 +22,8 @@ export interface User {
   email: string;
   name: string;
   phone: string;
+  role: 'admin' | 'agent';
+  createdBy?: string | null;
   emailVerified: boolean;
   phoneVerified: boolean;
   createdAt: string;

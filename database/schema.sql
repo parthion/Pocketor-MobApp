@@ -10,6 +10,8 @@ CREATE TABLE IF NOT EXISTS users (
   name VARCHAR(255) NOT NULL,
   phone VARCHAR(20) UNIQUE NOT NULL,
   password_hash VARCHAR(255) NOT NULL,
+  role ENUM('admin','agent') NOT NULL DEFAULT 'agent',
+  created_by VARCHAR(36) NULL,
   email_verified BOOLEAN DEFAULT FALSE,
   phone_verified BOOLEAN DEFAULT FALSE,
   verification_token VARCHAR(255),
@@ -18,9 +20,12 @@ CREATE TABLE IF NOT EXISTS users (
   last_login DATETIME,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
   INDEX idx_email (email),
   INDEX idx_phone (phone),
-  INDEX idx_created_at (created_at)
+  INDEX idx_created_at (created_at),
+  INDEX idx_role (role),
+  INDEX idx_created_by (created_by)
 );
 
 -- ============================================

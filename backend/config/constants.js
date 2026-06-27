@@ -4,8 +4,14 @@
  */
 
 module.exports = {
-  // User Roles
-  USER_ROLES: {
+  // App user roles
+  APP_USER_ROLES: {
+    ADMIN: 'admin',
+    AGENT: 'agent',
+  },
+
+  // Collection member roles
+  MEMBER_ROLES: {
     ADMIN: 'admin',
     MEMBER: 'member',
   },

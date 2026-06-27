@@ -173,6 +173,30 @@ export default function Index() {
               <Text style={styles.menuItemText}>Create Collection</Text>
             </TouchableOpacity>
 
+            {user?.role === 'admin' && (
+              <TouchableOpacity 
+                style={styles.menuItem}
+                onPress={() => {
+                  setMenuVisible(false);
+                  router.push("/(tabs)/employees");
+                }}
+              >
+                <Text style={styles.menuItemIcon}>👥</Text>
+                <Text style={styles.menuItemText}>Employees</Text>
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity 
+              style={styles.menuItem}
+              onPress={() => {
+                setMenuVisible(false);
+                router.push("/(tabs)/borrowers");
+              }}
+            >
+              <Text style={styles.menuItemIcon}>💳</Text>
+              <Text style={styles.menuItemText}>Borrowers</Text>
+            </TouchableOpacity>
+
             <TouchableOpacity style={styles.menuItem}>
               <Text style={styles.menuItemIcon}>⚙️</Text>
               <Text style={styles.menuItemText}>Settings</Text>

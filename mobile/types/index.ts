@@ -11,6 +11,18 @@ export interface OTPCode {
   verified: boolean;
 }
 
+export interface AppUser {
+  id: string;
+  email: string;
+  name: string;
+  phone: string;
+  role: 'admin' | 'agent';
+  createdBy?: string | null;
+  emailVerified: boolean;
+  phoneVerified: boolean;
+  createdAt: string;
+}
+
 export interface Member {
   id: string;
   name: string;

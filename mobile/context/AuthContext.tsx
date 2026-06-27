@@ -4,9 +4,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 
 export interface User {
+  id: string;
   email: string;
   name: string;
   phone: string;
+  role: 'admin' | 'agent';
+  createdBy?: string | null;
   emailVerified: boolean;
   phoneVerified: boolean;
   createdAt: string;
@@ -300,9 +303,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (response.success && response.data) {
         // Successful login
         const userData: User = {
+          id: response.data.user.id,
           email: response.data.user.email,
           name: response.data.user.name,
           phone: response.data.user.phone || '',
+          role: response.data.user.role || 'agent',
+          createdBy: response.data.user.createdBy || null,
           emailVerified: response.data.user.emailVerified || false,
           phoneVerified: response.data.user.phoneVerified || false,
           createdAt: response.data.user.createdAt || new Date().toISOString(),
@@ -365,9 +371,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (response.success && response.data) {
         // Successful login
         const userData: User = {
+          id: response.data.user.id,
           email: response.data.user.email,
           name: response.data.user.name,
           phone: response.data.user.phone || '',
+          role: response.data.user.role || 'agent',
+          createdBy: response.data.user.createdBy || null,
           emailVerified: response.data.user.emailVerified || false,
           phoneVerified: response.data.user.phoneVerified || false,
           createdAt: response.data.user.createdAt || new Date().toISOString(),

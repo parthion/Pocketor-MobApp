@@ -16,6 +16,8 @@ export default function TabsLayout() {
       <Tabs.Screen name="expense" options={{ title: 'Pocketor' }} />
       <Tabs.Screen name="reports" options={{ title: 'Pocketor' }} />
       <Tabs.Screen name="settings" options={{ title: 'Pocketor' }} />
+      <Tabs.Screen name="employees" options={{ title: 'Employees' }} />
+      <Tabs.Screen name="borrowers" options={{ title: 'Borrowers' }} />
     </Tabs>
   );
 }

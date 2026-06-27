@@ -59,7 +59,10 @@ export default function SettingsScreen() {
         <Text style={styles.groupTitle}>App</Text>
         <View style={styles.group}>
           <SettingRow icon="💼" label="Lines & Areas" onPress={() => router.push('/(tabs)/collection')} />
-          <SettingRow icon="👥" label="Customers" onPress={() => router.push('/(tabs)/customer')} />
+          <SettingRow icon="👥" label="Borrowers" onPress={() => router.push('/(tabs)/borrowers')} />
+          {user?.role === 'admin' && (
+            <SettingRow icon="👔" label="Employees" onPress={() => router.push('/(tabs)/employees')} />
+          )}
           <SettingRow icon="💰" label="Loans" onPress={() => router.push('/(tabs)/loans')} />
           <SettingRow icon="💳" label="Expenses" onPress={() => router.push('/(tabs)/expense')} />
           <SettingRow icon="📊" label="Reports" onPress={() => router.push('/(tabs)/reports')} />

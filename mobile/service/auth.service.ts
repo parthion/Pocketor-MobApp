@@ -144,6 +144,31 @@ export const loginWithPhone = async (phone: string, password: string) => {
   return response;
 };
 
+export const getAllUsers = async (page = 1, limit = 50) => {
+  return authCall<{ data: any[] }>(`/auth/users?page=${page}&limit=${limit}`, 'GET');
+};
+
+export const createUser = async (
+  email: string,
+  name: string,
+  phone: string,
+  password: string,
+  role: 'admin' | 'agent' = 'agent'
+) => {
+  return authCall<{ data: any }>('/auth/users', 'POST', {
+    email,
+    name,
+    phone,
+    password,
+    passwordConfirm: password,
+    role,
+  });
+};
+
+export const updateUserRole = async (userId: string, role: 'admin' | 'agent') => {
+  return authCall<{ data: any }>(`/auth/users/${userId}`, 'PUT', { role });
+};
+
 // ============= OTP VERIFICATION =============
 
 /**

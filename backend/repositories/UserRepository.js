@@ -64,12 +64,25 @@ class UserRepository {
     try {
       const offset = (page - 1) * limit;
       const [rows] = await connection.query(
-        'SELECT * FROM users LIMIT ? OFFSET ?',
+        'SELECT * FROM users ORDER BY created_at DESC LIMIT ? OFFSET ?',
         [limit, offset]
       );
       return rows.map(row => User.fromDatabase(row));
     } catch (error) {
       console.error('Error getting all users:', error);
+      throw error;
+    } finally {
+      connection.release();
+    }
+  }
+
+  async getCount() {
+    const connection = await pool.getConnection();
+    try {
+      const [rows] = await connection.query('SELECT COUNT(*) AS count FROM users');
+      return rows[0]?.count || 0;
+    } catch (error) {
+      console.error('Error counting users:', error);
       throw error;
     } finally {
       connection.release();
@@ -88,8 +101,16 @@ class UserRepository {
       const hashedPassword = await bcrypt.hash(userData.password, 10);
 
       await connection.query(
-        'INSERT INTO users (id, email, name, phone, password_hash) VALUES (?, ?, ?, ?, ?)',
-        [id, userData.email, userData.name, userData.phone, hashedPassword]
+        'INSERT INTO users (id, email, name, phone, password_hash, role, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [
+          id,
+          userData.email,
+          userData.name,
+          userData.phone,
+          hashedPassword,
+          userData.role || 'agent',
+          userData.createdBy || null,
+        ]
       );
 
       return await this.getById(id);

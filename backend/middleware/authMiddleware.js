@@ -35,6 +35,7 @@ const verifyToken = (req, res, next) => {
       // Attach user info to request
       req.userId = decoded.id;
       req.userEmail = decoded.email;
+      req.userRole = decoded.role;
       next();
     });
   } catch (error) {
@@ -105,6 +106,16 @@ const validatePhone = (phone) => {
 /**
  * Error handler middleware
  */
+const verifyRole = (requiredRole) => (req, res, next) => {
+  if (req.userRole !== requiredRole) {
+    return res.status(constants.STATUS_CODES.FORBIDDEN).json({
+      success: false,
+      message: constants.MESSAGES.FORBIDDEN,
+    });
+  }
+  next();
+};
+
 const errorHandler = (err, req, res, next) => {
   console.error('Error:', err);
 
@@ -118,6 +129,7 @@ const errorHandler = (err, req, res, next) => {
 
 module.exports = {
   verifyToken,
+  verifyRole,
   validateRequest,
   validateEmail,
   validatePassword,
