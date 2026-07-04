@@ -127,6 +127,46 @@ const errorHandler = (err, req, res, next) => {
   });
 };
 
+// Simple in-memory rate limiter
+const _attempts = new Map();
+
+/**
+ * Rate limiter middleware
+ * @param {number} maxAttempts - Max requests allowed in window
+ * @param {number} windowMs - Time window in milliseconds
+ */
+const rateLimiter = (maxAttempts = 10, windowMs = 15 * 60 * 1000) => (req, res, next) => {
+  const key = req.ip || req.socket?.remoteAddress || 'unknown';
+  const now = Date.now();
+  const entry = _attempts.get(key);
+
+  if (entry) {
+    if (now < entry.resetAt) {
+      if (entry.count >= maxAttempts) {
+        return res.status(429).json({
+          success: false,
+          message: 'Too many attempts. Please try again later.',
+        });
+      }
+      entry.count += 1;
+    } else {
+      _attempts.set(key, { count: 1, resetAt: now + windowMs });
+    }
+  } else {
+    _attempts.set(key, { count: 1, resetAt: now + windowMs });
+  }
+
+  next();
+};
+
+// Clean up old entries every 30 minutes to prevent memory leak
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of _attempts.entries()) {
+    if (now >= entry.resetAt) _attempts.delete(key);
+  }
+}, 30 * 60 * 1000);
+
 module.exports = {
   verifyToken,
   verifyRole,
@@ -135,4 +175,5 @@ module.exports = {
   validatePassword,
   validatePhone,
   errorHandler,
+  rateLimiter,
 };

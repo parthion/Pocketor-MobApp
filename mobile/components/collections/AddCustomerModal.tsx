@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     Alert,
     FlatList,
@@ -17,6 +17,7 @@ interface AddCustomerModalProps {
   onSave: (customerData: any) => void;
   lines: any[];
   areas: any[];
+  initialData?: any;
 }
 
 export default function AddCustomerModal({
@@ -25,6 +26,7 @@ export default function AddCustomerModal({
   onSave,
   lines,
   areas,
+  initialData,
 }: AddCustomerModalProps) {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -33,6 +35,20 @@ export default function AddCustomerModal({
   const [selectedAreaId, setSelectedAreaId] = useState('');
   const [showLinePicker, setShowLinePicker] = useState(false);
   const [showAreaPicker, setShowAreaPicker] = useState(false);
+
+  const isEditMode = !!initialData;
+
+  useEffect(() => {
+    if (visible && initialData) {
+      setName(initialData.name || '');
+      setPhone(initialData.phone || '');
+      setAddress(initialData.address || '');
+      setSelectedLineId(initialData.lineId || '');
+      setSelectedAreaId(initialData.areaId || '');
+    } else if (visible && !initialData) {
+      resetForm();
+    }
+  }, [visible, initialData]);
 
   const selectedLine = lines.find((line) => line.id === selectedLineId);
   const selectedArea = areas.find((area) => area.id === selectedAreaId);
@@ -77,7 +93,7 @@ export default function AddCustomerModal({
       address: address.trim(),
       lineId: selectedLineId,
       areaId: selectedAreaId,
-      status: 'active',
+      status: initialData?.status || 'active',
     };
 
     onSave(customerData);
@@ -107,7 +123,7 @@ export default function AddCustomerModal({
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Add Customer</Text>
+          <Text style={styles.headerTitle}>{isEditMode ? 'Edit Customer' : 'Add Customer'}</Text>
           <TouchableOpacity onPress={handleCancel}>
             <Text style={styles.cancelButton}>Cancel</Text>
           </TouchableOpacity>
@@ -197,7 +213,7 @@ export default function AddCustomerModal({
 
           {/* Save Button */}
           <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-            <Text style={styles.saveButtonText}>SAVE CUSTOMER</Text>
+            <Text style={styles.saveButtonText}>{isEditMode ? 'UPDATE CUSTOMER' : 'SAVE CUSTOMER'}</Text>
           </TouchableOpacity>
 
           <View style={{ height: 40 }} />

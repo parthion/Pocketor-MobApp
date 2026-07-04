@@ -1,5 +1,5 @@
 import * as AuthService from '@/service/auth.service';
-import { OTPCode } from '@/types';
+import { setUnauthorizedCallback } from '@/service/config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 
@@ -22,7 +22,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<{ success: boolean; message: string; isRegistered: boolean }>;
   loginWithPhone: (phone: string, password: string) => Promise<{ success: boolean; message: string; isRegistered: boolean }>;
   register: (email: string, password: string, name: string, phone: string) => Promise<{ success: boolean; message: string }>;
-  logout: () => void;
+  logout: () => Promise<void>;
   validateEmail: (email: string) => boolean;
   validatePhone: (phone: string) => boolean;
   validatePassword: (password: string) => { valid: boolean; errors: string[] };
@@ -34,8 +34,6 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-const USERS_STORAGE_KEY = 'app_users';
-const OTP_STORAGE_KEY = 'app_otps';
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -45,6 +43,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Check for existing auth token on mount
   useEffect(() => {
     checkAuthStatus();
+    // Register callback so API layer can trigger logout on 401
+    setUnauthorizedCallback(() => {
+      setIsLoggedIn(false);
+      setUser(null);
+    });
   }, []);
 
   const checkAuthStatus = async () => {
@@ -101,105 +104,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
   };
 
-  // Get all registered users from storage
-  const getRegisteredUsers = async (): Promise<User[]> => {
-    try {
-      const data = await AsyncStorage.getItem(USERS_STORAGE_KEY);
-      return data ? JSON.parse(data) : [];
-    } catch (error) {
-      console.error('Error reading users from storage:', error);
-      return [];
-    }
-  };
-
-  // Save users to storage
-  const saveUsers = async (users: User[]): Promise<void> => {
-    try {
-      await AsyncStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
-    } catch (error) {
-      console.error('Error saving users to storage:', error);
-    }
-  };
-
-  // Get all OTP codes from storage
-  const getOTPCodes = async (): Promise<OTPCode[]> => {
-    try {
-      const data = await AsyncStorage.getItem(OTP_STORAGE_KEY);
-      return data ? JSON.parse(data) : [];
-    } catch (error) {
-      console.error('Error reading OTPs from storage:', error);
-      return [];
-    }
-  };
-
-  // Save OTP codes to storage
-  const saveOTPCodes = async (otps: OTPCode[]): Promise<void> => {
-    try {
-      await AsyncStorage.setItem(OTP_STORAGE_KEY, JSON.stringify(otps));
-    } catch (error) {
-      console.error('Error saving OTPs to storage:', error);
-    }
-  };
-
-  // Generate random OTP (6 digits)
-  const generateOTP = (): string => {
-    return Math.floor(100000 + Math.random() * 900000).toString();
-  };
-
   // Check if user is registered
   const isUserRegistered = async (email: string): Promise<boolean> => {
-    const users = await getRegisteredUsers();
-    return users.some((u) => u.email.toLowerCase() === email.toLowerCase());
+    return AuthService.checkUserExists(email);
   };
 
   // Send OTP to email or phone
   const sendOTP = async (email?: string, phone?: string): Promise<{ success: boolean; message: string; otp?: string }> => {
     try {
-      const contact = email || phone;
-      if (!contact) {
-        return { success: false, message: 'Email or phone is required' };
-      }
-
-      if (email && !validateEmail(email)) {
-        return { success: false, message: 'Invalid email format' };
-      }
-
-      if (phone && !validatePhone(phone)) {
-        return { success: false, message: 'Invalid phone format' };
-      }
-
-      const otp = generateOTP();
-      const now = new Date();
-      const expiresAt = new Date(now.getTime() + 10 * 60000); // 10 minutes expiry
-
-      // Get existing OTPs
-      const otps = await getOTPCodes();
-
-      // Remove old OTPs for this contact
-      const filteredOTPs = otps.filter((o) => {
-        if (email) return o.email !== email;
-        if (phone) return o.phone !== phone;
-        return true;
-      });
-
-      // Add new OTP
-      const newOTP: OTPCode = {
-        ...(email && { email }),
-        ...(phone && { phone }),
-        code: otp,
-        createdAt: now.toISOString(),
-        expiresAt: expiresAt.toISOString(),
-        attempts: 0,
-        verified: false,
+      const response = await AuthService.sendOTP(email, phone);
+      return {
+        success: response.success,
+        message: response.message || 'OTP sent',
+        otp: response.data?.otp,
       };
-
-      filteredOTPs.push(newOTP);
-      await saveOTPCodes(filteredOTPs);
-
-      // In production, send OTP via email or SMS
-      console.log(`OTP sent to ${contact}: ${otp}`);
-
-      return { success: true, message: `OTP sent to ${contact}`, otp };
     } catch (error) {
       return { success: false, message: 'Failed to send OTP' };
     }
@@ -208,69 +126,38 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Verify OTP
   const verifyOTP = async (contact: string, otp: string): Promise<{ success: boolean; message: string }> => {
     try {
-      const otps = await getOTPCodes();
-      const otpRecord = otps.find((o) => (o.email === contact || o.phone === contact) && !o.verified);
-
-      if (!otpRecord) {
-        return { success: false, message: 'No OTP found. Please request a new one.' };
-      }
-
-      // Check if OTP expired
-      if (new Date(otpRecord.expiresAt) < new Date()) {
-        return { success: false, message: 'OTP has expired. Please request a new one.' };
-      }
-
-      // Check max attempts
-      if (otpRecord.attempts >= 3) {
-        return { success: false, message: 'Too many incorrect attempts. Please request a new OTP.' };
-      }
-
-      // Verify OTP
-      if (otpRecord.code !== otp) {
-        otpRecord.attempts += 1;
-        await saveOTPCodes(otps);
-        const remaining = 3 - otpRecord.attempts;
-        return { success: false, message: `Incorrect OTP. ${remaining} attempts remaining.` };
-      }
-
-      // Mark as verified
-      otpRecord.verified = true;
-      await saveOTPCodes(otps);
-
-      return { success: true, message: 'OTP verified successfully' };
+      const response = await AuthService.verifyOTP(contact, otp, 'email');
+      return { success: response.success, message: response.message || 'OTP verified' };
     } catch (error) {
       return { success: false, message: 'OTP verification failed' };
     }
   };
 
-  // Forgot password - TODO: Integrate with backend API
+  // Forgot password
   const forgotPassword = async (email: string): Promise<{ success: boolean; message: string }> => {
     try {
       if (!validateEmail(email)) {
         return { success: false, message: 'Invalid email format' };
       }
-
-      // TODO: Call backend API for password reset
-      return { success: true, message: 'If an account exists, a password reset link will be sent to your email.' };
+      const response = await AuthService.forgotPassword(email);
+      return { success: response.success, message: response.message || 'Reset link sent' };
     } catch (error) {
       return { success: false, message: 'Failed to process password reset request' };
     }
   };
 
-  // Reset password with token - TODO: Integrate with backend API
+  // Reset password with token
   const resetPassword = async (email: string, token: string, newPassword: string): Promise<{ success: boolean; message: string }> => {
     try {
       if (!validateEmail(email)) {
         return { success: false, message: 'Invalid email format' };
       }
-
       const passwordValidation = validatePassword(newPassword);
       if (!passwordValidation.valid) {
         return { success: false, message: passwordValidation.errors.join('\n') };
       }
-
-      // TODO: Call backend API for password reset confirmation
-      return { success: true, message: 'Password reset successfully. Please login with your new password.' };
+      const response = await AuthService.resetPassword(email, token, newPassword);
+      return { success: response.success, message: response.message || 'Password reset successfully' };
     } catch (error) {
       return { success: false, message: 'Failed to reset password' };
     }
@@ -474,14 +361,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const logout = async () => {
-    // Clear auth data from AsyncStorage
-    await AsyncStorage.removeItem('auth_token');
-    await AsyncStorage.removeItem('refresh_token');
-    await AsyncStorage.removeItem('user_data');
-    
     setIsLoggedIn(false);
     setUser(null);
-    console.log('User logged out');
+    await AsyncStorage.multiRemove(['auth_token', 'refresh_token', 'user_data']);
   };
 
   return (

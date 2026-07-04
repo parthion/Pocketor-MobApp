@@ -29,16 +29,14 @@ export default function LoansScreen() {
     setShowAddLoanModal(true);
   };
 
-  const handleSaveLoan = (loanData: any) => {
-    const newLoan = {
-      id: Date.now().toString(),
-      ...loanData,
-      createdAt: new Date(),
-    };
-
-    addLoan(newLoan);
-    setShowAddLoanModal(false);
-    Alert.alert('Success', 'Loan created successfully!');
+  const handleSaveLoan = async (loanData: any) => {
+    try {
+      await addLoan(loanData);
+      setShowAddLoanModal(false);
+      Alert.alert('Success', 'Loan created successfully!');
+    } catch (error: any) {
+      Alert.alert('Error', error?.message || 'Failed to create loan');
+    }
   };
 
   const getFilteredLoans = () => {
@@ -70,7 +68,10 @@ export default function LoansScreen() {
     const progressPercentage = parseFloat(((item.paidAmount / item.totalAmount) * 100).toFixed(1));
 
     return (
-      <TouchableOpacity style={styles.loanCard}>
+      <TouchableOpacity
+        style={styles.loanCard}
+        onPress={() => router.push({ pathname: '/loan-detail/[id]', params: { id: item.id } })}
+      >
         <View style={styles.loanHeader}>
           <View style={styles.loanTitleContainer}>
             <Text style={styles.loanId}>#{item.id.slice(-6)}</Text>
@@ -109,7 +110,7 @@ export default function LoansScreen() {
           <View style={styles.installmentItem}>
             <Text style={styles.installmentLabel}>Paid</Text>
             <Text style={styles.installmentValue}>
-              {item.paidInstallments}/{item.numberOfInstallments}
+              {item.paidInstallments}/{item.noOfInstalls}
             </Text>
           </View>
           <View style={styles.installmentDivider} />

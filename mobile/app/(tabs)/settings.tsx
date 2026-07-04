@@ -12,9 +12,8 @@ export default function SettingsScreen() {
   const handleLogout = () => {
     Alert.alert('Logout', 'Are you sure you want to logout?', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Logout', style: 'destructive', onPress: () => {
-        logout();
-        router.replace('/auth/login');
+      { text: 'Logout', style: 'destructive', onPress: async () => {
+        await logout();
       }},
     ]);
   };

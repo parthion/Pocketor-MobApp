@@ -20,7 +20,7 @@ import {
 
 export default function CollectionScreen() {
   const router = useRouter();
-  const { lines, addLine, areas, addArea, refreshLines, refreshAreas } = useLoanCollection();
+  const { lines, addLine, updateLine, deleteLine, areas, addArea, updateArea, deleteArea } = useLoanCollection();
   const [date, setDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedLineId, setSelectedLineId] = useState('');
@@ -29,6 +29,8 @@ export default function CollectionScreen() {
   const [showAddAreaModal, setShowAddAreaModal] = useState(false);
   const [showLinePicker, setShowLinePicker] = useState(false);
   const [showAreaPicker, setShowAreaPicker] = useState(false);
+  const [editingLine, setEditingLine] = useState<any>(null);
+  const [editingArea, setEditingArea] = useState<any>(null);
 
   const selectedLine = lines.find(l => l.id === selectedLineId);
   const selectedArea = areas.find(a => a.id === selectedAreaId);
@@ -44,28 +46,90 @@ export default function CollectionScreen() {
   };
 
   const handleAddLine = () => {
+    setEditingLine(null);
     setShowAddLineModal(true);
+  };
+
+  const handleEditLine = (line: any) => {
+    setEditingLine(line);
+    setShowAddLineModal(true);
+  };
+
+  const handleDeleteLine = (line: any) => {
+    Alert.alert('Delete Line', `Delete "${line.lineName}"? This may affect areas and customers linked to it.`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete', style: 'destructive', onPress: async () => {
+          try {
+            await deleteLine(line.id);
+            if (selectedLineId === line.id) { setSelectedLineId(''); setSelectedAreaId(''); }
+          } catch (error: any) {
+            Alert.alert('Error', error?.message || 'Failed to delete line');
+          }
+        },
+      },
+    ]);
   };
 
   const handleSaveLine = async (lineData: any) => {
     try {
-      await addLine(lineData);
+      if (editingLine) {
+        await updateLine(editingLine.id, lineData);
+        Alert.alert('Success', 'Line updated successfully!');
+      } else {
+        await addLine(lineData);
+        Alert.alert('Success', 'Line created successfully!');
+      }
       setShowAddLineModal(false);
-      Alert.alert('Success', 'Line created successfully!');
-    } catch (error) {
-      console.error('Error saving line:', error);
-      Alert.alert('Error', 'Failed to create line. Please try again.');
+      setEditingLine(null);
+    } catch (error: any) {
+      Alert.alert('Error', error?.message || 'Failed to save line');
     }
+  };
+
+  const handleAddArea = () => {
+    if (lines.length === 0) {
+      Alert.alert('No Lines', 'Please create a line first');
+      return;
+    }
+    setEditingArea(null);
+    setShowAddAreaModal(true);
+  };
+
+  const handleEditArea = (area: any) => {
+    setEditingArea(area);
+    setShowAddAreaModal(true);
+  };
+
+  const handleDeleteArea = (area: any) => {
+    Alert.alert('Delete Area', `Delete "${area.name}"?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete', style: 'destructive', onPress: async () => {
+          try {
+            await deleteArea(area.id);
+            if (selectedAreaId === area.id) setSelectedAreaId('');
+          } catch (error: any) {
+            Alert.alert('Error', error?.message || 'Failed to delete area');
+          }
+        },
+      },
+    ]);
   };
 
   const handleSaveArea = async (areaData: any) => {
     try {
-      await addArea(areaData);
+      if (editingArea) {
+        await updateArea(editingArea.id, areaData);
+        Alert.alert('Success', 'Area updated successfully!');
+      } else {
+        await addArea(areaData);
+        Alert.alert('Success', 'Area created successfully!');
+      }
       setShowAddAreaModal(false);
-      Alert.alert('Success', 'Area created successfully!');
-    } catch (error) {
-      console.error('Error saving area:', error);
-      Alert.alert('Error', 'Failed to create area. Please try again.');
+      setEditingArea(null);
+    } catch (error: any) {
+      Alert.alert('Error', error?.message || 'Failed to save area');
     }
   };
 
@@ -160,7 +224,7 @@ export default function CollectionScreen() {
               >
                 <Text style={styles.icon}>▼</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.addButton} onPress={handleSearchArea}>
+              <TouchableOpacity style={styles.addButton} onPress={handleAddArea}>
                 <Text style={styles.addButtonText}>+</Text>
               </TouchableOpacity>
             </View>
@@ -177,22 +241,62 @@ export default function CollectionScreen() {
           <Text style={styles.submitButtonText}>SUBMIT</Text>
         </TouchableOpacity>
 
-        {/* Debug: Show Lines */}
-        {lines.length > 0 && (
-          <View style={styles.debugSection}>
-            <Text style={styles.debugTitle}>Created Lines ({lines.length})</Text>
-            {lines.map((line) => (
-              <TouchableOpacity
-                key={line.id}
-                style={styles.lineItem}
-                onPress={() => setSelectedLineId(line.id)}
-              >
-                <Text style={styles.lineItemName}>{line.lineName}</Text>
-                <Text style={styles.lineItemType}>{line.lineType}</Text>
-              </TouchableOpacity>
-            ))}
+        {/* Lines Management */}
+        <View style={styles.managementSection}>
+          <View style={styles.managementHeader}>
+            <Text style={styles.managementTitle}>Lines ({lines.length})</Text>
+            <TouchableOpacity style={styles.addSmallButton} onPress={handleAddLine}>
+              <Text style={styles.addSmallButtonText}>+ Add</Text>
+            </TouchableOpacity>
           </View>
-        )}
+          {lines.map((line) => (
+            <View key={line.id} style={styles.managementItem}>
+              <TouchableOpacity style={styles.managementItemInfo} onPress={() => { setSelectedLineId(line.id); setSelectedAreaId(''); }}>
+                <Text style={styles.managementItemName}>{line.lineName}</Text>
+                <Text style={styles.managementItemSub}>{line.lineType}</Text>
+              </TouchableOpacity>
+              <View style={styles.managementItemActions}>
+                <TouchableOpacity style={styles.editBtn} onPress={() => handleEditLine(line)}>
+                  <Text style={styles.editBtnText}>Edit</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDeleteLine(line)}>
+                  <Text style={styles.deleteBtnText}>Delete</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ))}
+          {lines.length === 0 && <Text style={styles.emptyManagement}>No lines yet. Tap + Add to create one.</Text>}
+        </View>
+
+        {/* Areas Management */}
+        <View style={styles.managementSection}>
+          <View style={styles.managementHeader}>
+            <Text style={styles.managementTitle}>Areas ({areas.length})</Text>
+            <TouchableOpacity style={styles.addSmallButton} onPress={handleAddArea}>
+              <Text style={styles.addSmallButtonText}>+ Add</Text>
+            </TouchableOpacity>
+          </View>
+          {areas.map((area) => {
+            const line = lines.find(l => l.id === area.lineId);
+            return (
+              <View key={area.id} style={styles.managementItem}>
+                <TouchableOpacity style={styles.managementItemInfo} onPress={() => setSelectedAreaId(area.id)}>
+                  <Text style={styles.managementItemName}>{area.name}</Text>
+                  {line && <Text style={styles.managementItemSub}>{line.lineName}</Text>}
+                </TouchableOpacity>
+                <View style={styles.managementItemActions}>
+                  <TouchableOpacity style={styles.editBtn} onPress={() => handleEditArea(area)}>
+                    <Text style={styles.editBtnText}>Edit</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDeleteArea(area)}>
+                    <Text style={styles.deleteBtnText}>Delete</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            );
+          })}
+          {areas.length === 0 && <Text style={styles.emptyManagement}>No areas yet. Tap + Add to create one.</Text>}
+        </View>
       </ScrollView>
 
       {/* Bottom Navigation */}
@@ -225,19 +329,21 @@ export default function CollectionScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Add Line Modal */}
+      {/* Add / Edit Line Modal */}
       <AddLineModal
         visible={showAddLineModal}
-        onClose={() => setShowAddLineModal(false)}
+        onClose={() => { setShowAddLineModal(false); setEditingLine(null); }}
         onSave={handleSaveLine}
+        initialData={editingLine}
       />
 
-      {/* Add Area Modal */}
+      {/* Add / Edit Area Modal */}
       <AddAreaModal
         visible={showAddAreaModal}
-        onClose={() => setShowAddAreaModal(false)}
+        onClose={() => { setShowAddAreaModal(false); setEditingArea(null); }}
         onSave={handleSaveArea}
         lines={lines}
+        initialData={editingArea}
       />
 
       {/* Date Picker */}
@@ -406,35 +512,91 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
-  debugSection: {
+  managementSection: {
     marginTop: 20,
-    padding: 16,
+    marginBottom: 8,
     backgroundColor: '#f9f9f9',
-    borderRadius: 8,
+    borderRadius: 10,
+    padding: 14,
   },
-  debugTitle: {
+  managementHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  managementTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 12,
+    fontWeight: '700',
     color: '#333',
   },
-  lineItem: {
-    padding: 12,
+  addSmallButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    backgroundColor: '#007AFF',
+    borderRadius: 6,
+  },
+  addSmallButtonText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  managementItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#fff',
     borderRadius: 8,
+    padding: 12,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: '#e0e0e0',
   },
-  lineItemName: {
-    fontSize: 16,
+  managementItemInfo: {
+    flex: 1,
+  },
+  managementItemName: {
+    fontSize: 15,
     fontWeight: '600',
     color: '#000',
-    marginBottom: 4,
+    marginBottom: 2,
   },
-  lineItemType: {
-    fontSize: 14,
+  managementItemSub: {
+    fontSize: 13,
     color: '#666',
+  },
+  managementItemActions: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  editBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 5,
+    borderWidth: 1,
+    borderColor: '#007AFF',
+  },
+  editBtnText: {
+    color: '#007AFF',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  deleteBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 5,
+    borderWidth: 1,
+    borderColor: '#FF3B30',
+  },
+  deleteBtnText: {
+    color: '#FF3B30',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  emptyManagement: {
+    fontSize: 13,
+    color: '#999',
+    textAlign: 'center',
+    paddingVertical: 10,
   },
   bottomNav: {
     flexDirection: 'row',

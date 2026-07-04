@@ -16,8 +16,9 @@ import {
 
 export default function CustomerScreen() {
   const router = useRouter();
-  const { customers, addCustomer, lines, areas } = useLoanCollection();
+  const { customers, addCustomer, updateCustomer, deleteCustomer, lines, areas } = useLoanCollection();
   const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
+  const [editingCustomer, setEditingCustomer] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
   const handleAddCustomer = () => {
@@ -29,19 +30,50 @@ export default function CustomerScreen() {
       Alert.alert('No Areas', 'Please create an area first before adding customers');
       return;
     }
+    setEditingCustomer(null);
     setShowAddCustomerModal(true);
   };
 
-  const handleSaveCustomer = (customerData: any) => {
-    const newCustomer = {
-      id: Date.now().toString(),
-      ...customerData,
-      createdAt: new Date(),
-    };
+  const handleEditCustomer = (customer: any) => {
+    setEditingCustomer(customer);
+    setShowAddCustomerModal(true);
+  };
 
-    addCustomer(newCustomer);
-    setShowAddCustomerModal(false);
-    Alert.alert('Success', 'Customer added successfully!');
+  const handleDeleteCustomer = (customer: any) => {
+    Alert.alert(
+      'Delete Customer',
+      `Are you sure you want to delete ${customer.name}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteCustomer(customer.id);
+            } catch (error: any) {
+              Alert.alert('Error', error?.message || 'Failed to delete customer');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleSaveCustomer = async (customerData: any) => {
+    try {
+      if (editingCustomer) {
+        await updateCustomer(editingCustomer.id, customerData);
+        Alert.alert('Success', 'Customer updated successfully!');
+      } else {
+        await addCustomer(customerData);
+        Alert.alert('Success', 'Customer added successfully!');
+      }
+      setShowAddCustomerModal(false);
+      setEditingCustomer(null);
+    } catch (error: any) {
+      Alert.alert('Error', error?.message || 'Failed to save customer');
+    }
   };
 
   const filteredCustomers = customers.filter((customer) =>
@@ -63,14 +95,14 @@ export default function CustomerScreen() {
     };
 
     return (
-      <TouchableOpacity style={styles.customerCard}>
+      <View style={styles.customerCard}>
         <View style={styles.customerHeader}>
           <Text style={styles.customerName}>{item.name}</Text>
           <View style={[styles.statusBadge, getStatusStyle(item.status)]}>
             <Text style={styles.statusText}>{item.status}</Text>
           </View>
         </View>
-        
+
         <View style={styles.customerInfo}>
           <Text style={styles.customerPhone}>📞 {item.phone}</Text>
           <Text style={styles.customerAddress}>📍 {item.address}</Text>
@@ -83,7 +115,22 @@ export default function CustomerScreen() {
             <Text style={styles.metaText}>Area: {area.name}</Text>
           </View>
         )}
-      </TouchableOpacity>
+
+        <View style={styles.cardActions}>
+          <TouchableOpacity
+            style={styles.editButton}
+            onPress={() => handleEditCustomer(item)}
+          >
+            <Text style={styles.editButtonText}>Edit</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.deleteButton}
+            onPress={() => handleDeleteCustomer(item)}
+          >
+            <Text style={styles.deleteButtonText}>Delete</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
     );
   };
 
@@ -159,13 +206,14 @@ export default function CustomerScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Add Customer Modal */}
+      {/* Add / Edit Customer Modal */}
       <AddCustomerModal
         visible={showAddCustomerModal}
-        onClose={() => setShowAddCustomerModal(false)}
+        onClose={() => { setShowAddCustomerModal(false); setEditingCustomer(null); }}
         onSave={handleSaveCustomer}
         lines={lines}
         areas={areas}
+        initialData={editingCustomer}
       />
     </SafeAreaView>
   );
@@ -298,6 +346,39 @@ const styles = StyleSheet.create({
   metaSeparator: {
     marginHorizontal: 8,
     color: '#ccc',
+  },
+  cardActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 8,
+    marginTop: 12,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+  },
+  editButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#007AFF',
+  },
+  editButtonText: {
+    color: '#007AFF',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  deleteButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#FF3B30',
+  },
+  deleteButtonText: {
+    color: '#FF3B30',
+    fontSize: 13,
+    fontWeight: '600',
   },
   emptyContainer: {
     flex: 1,

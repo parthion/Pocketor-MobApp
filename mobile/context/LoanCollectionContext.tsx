@@ -75,7 +75,6 @@ export function LoanCollectionProvider({ children }: { children: ReactNode }) {
         refreshAreas(),
         refreshCustomers(),
         refreshLoans(),
-        refreshPayments(),
       ]);
     } catch (error) {
       console.error('Error loading data:', error);
@@ -121,10 +120,12 @@ export function LoanCollectionProvider({ children }: { children: ReactNode }) {
   const updateLine = async (id: string, updatedLine: Partial<Line>) => {
     try {
       const response = await loanCollectionService.updateLine(id, updatedLine);
-      if (response.success && response.data) {
+      if (response.success) {
         setLines((prev) =>
-          prev.map((line) => (line.id === id ? response.data! : line))
+          prev.map((line) => (line.id === id ? { ...line, ...updatedLine } : line))
         );
+      } else {
+        throw new Error(response.message || 'Failed to update line');
       }
     } catch (error) {
       console.error('Error updating line:', error);
@@ -179,10 +180,12 @@ export function LoanCollectionProvider({ children }: { children: ReactNode }) {
   const updateArea = async (id: string, updatedArea: Partial<Area>) => {
     try {
       const response = await loanCollectionService.updateArea(id, updatedArea);
-      if (response.success && response.data) {
+      if (response.success) {
         setAreas((prev) =>
-          prev.map((area) => (area.id === id ? response.data! : area))
+          prev.map((area) => (area.id === id ? { ...area, ...updatedArea } : area))
         );
+      } else {
+        throw new Error(response.message || 'Failed to update area');
       }
     } catch (error) {
       console.error('Error updating area:', error);
@@ -218,10 +221,11 @@ export function LoanCollectionProvider({ children }: { children: ReactNode }) {
       const response = await loanCollectionService.createCustomer(customer);
       if (response.success && response.data) {
         setCustomers((prev) => [...prev, response.data!]);
+      } else {
+        throw new Error(response.message || 'Failed to create customer');
       }
     } catch (error) {
       console.error('Error adding customer:', error);
-      setCustomers((prev) => [...prev, customer]);
       throw error;
     }
   };
@@ -229,10 +233,12 @@ export function LoanCollectionProvider({ children }: { children: ReactNode }) {
   const updateCustomer = async (id: string, updatedCustomer: Partial<Customer>) => {
     try {
       const response = await loanCollectionService.updateCustomer(id, updatedCustomer);
-      if (response.success && response.data) {
+      if (response.success) {
         setCustomers((prev) =>
-          prev.map((customer) => (customer.id === id ? response.data! : customer))
+          prev.map((customer) => (customer.id === id ? { ...customer, ...updatedCustomer } : customer))
         );
+      } else {
+        throw new Error(response.message || 'Failed to update customer');
       }
     } catch (error) {
       console.error('Error updating customer:', error);
@@ -268,10 +274,11 @@ export function LoanCollectionProvider({ children }: { children: ReactNode }) {
       const response = await loanCollectionService.createLoan(loan);
       if (response.success && response.data) {
         setLoans((prev) => [...prev, response.data!]);
+      } else {
+        throw new Error(response.message || 'Failed to create loan');
       }
     } catch (error) {
       console.error('Error adding loan:', error);
-      setLoans((prev) => [...prev, loan]);
       throw error;
     }
   };
@@ -279,10 +286,12 @@ export function LoanCollectionProvider({ children }: { children: ReactNode }) {
   const updateLoan = async (id: string, updatedLoan: any) => {
     try {
       const response = await loanCollectionService.updateLoan(id, updatedLoan);
-      if (response.success && response.data) {
+      if (response.success) {
         setLoans((prev) =>
-          prev.map((loan) => (loan.id === id ? response.data! : loan))
+          prev.map((loan) => (loan.id === id ? { ...loan, ...updatedLoan } : loan))
         );
+      } else {
+        throw new Error(response.message || 'Failed to update loan');
       }
     } catch (error) {
       console.error('Error updating loan:', error);
@@ -303,13 +312,20 @@ export function LoanCollectionProvider({ children }: { children: ReactNode }) {
   // ===== PAYMENT OPERATIONS =====
   const refreshPayments = async () => {
     try {
-      // load payments for all loans
-      const allPayments: any[] = [];
-      for (const loan of loans) {
-        const res = await loanCollectionService.getPaymentsByLoan(loan.id);
-        if (res.success && res.data) allPayments.push(...res.data);
+      // Only load payments if there are loans to load for
+      if (loans.length === 0) {
+        setPayments([]);
+        return;
       }
-      setPayments(allPayments);
+      // Load payments for all loans in parallel (batched, not sequential)
+      const results = await Promise.all(
+        loans.map(loan =>
+          loanCollectionService.getPaymentsByLoan(loan.id)
+            .then(res => (res.success && res.data ? res.data : []))
+            .catch(() => [])
+        )
+      );
+      setPayments(results.flat());
     } catch (error) {
       console.error('Error refreshing payments:', error);
     }

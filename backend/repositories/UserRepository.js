@@ -236,6 +236,117 @@ class UserRepository {
       connection.release();
     }
   }
+
+  /**
+   * Get user by phone
+   * @param {string} phone - User phone number
+   * @returns {Promise<User|null>}
+   */
+  async getByPhone(phone) {
+    const connection = await pool.getConnection();
+    try {
+      const [rows] = await connection.query(
+        'SELECT * FROM users WHERE phone = ?',
+        [phone]
+      );
+      if (rows.length === 0) return null;
+      return User.fromDatabase(rows[0]);
+    } catch (error) {
+      console.error('Error getting user by phone:', error);
+      throw error;
+    } finally {
+      connection.release();
+    }
+  }
+
+  /**
+   * Update user password
+   * @param {string} id - User ID
+   * @param {string} hashedPassword - Hashed password
+   * @returns {Promise<boolean>}
+   */
+  async updatePassword(id, hashedPassword) {
+    const connection = await pool.getConnection();
+    try {
+      const [result] = await connection.query(
+        'UPDATE users SET password_hash = ? WHERE id = ?',
+        [hashedPassword, id]
+      );
+      return result.affectedRows > 0;
+    } catch (error) {
+      console.error('Error updating password:', error);
+      throw error;
+    } finally {
+      connection.release();
+    }
+  }
+
+  /**
+   * Store refresh token
+   * @param {string} userId - User ID
+   * @param {string} token - Refresh token
+   * @param {Date} expiresAt - Expiry date
+   * @returns {Promise<object>}
+   */
+  async storeRefreshToken(userId, token, expiresAt) {
+    const connection = await pool.getConnection();
+    try {
+      const id = uuidv4();
+      await connection.query(
+        'INSERT INTO refresh_tokens (id, user_id, token, expires_at) VALUES (?, ?, ?, ?)',
+        [id, userId, token, expiresAt]
+      );
+      return { id, userId, token, expiresAt };
+    } catch (error) {
+      console.error('Error storing refresh token:', error);
+      throw error;
+    } finally {
+      connection.release();
+    }
+  }
+
+  /**
+   * Get refresh token record
+   * @param {string} token - Refresh token
+   * @returns {Promise<object|null>}
+   */
+  async getRefreshToken(token) {
+    const connection = await pool.getConnection();
+    try {
+      const [rows] = await connection.query(
+        'SELECT * FROM refresh_tokens WHERE token = ? AND expires_at > NOW()',
+        [token]
+      );
+      if (rows.length === 0) return null;
+      return rows[0];
+    } catch (error) {
+      console.error('Error getting refresh token:', error);
+      throw error;
+    } finally {
+      connection.release();
+    }
+  }
+
+  /**
+   * Delete refresh token
+   * @param {string} token - Refresh token
+   * @returns {Promise<boolean>}
+   */
+  async deleteRefreshToken(token) {
+    const connection = await pool.getConnection();
+    try {
+      const [result] = await connection.query(
+        'DELETE FROM refresh_tokens WHERE token = ?',
+        [token]
+      );
+      return result.affectedRows > 0;
+    } catch (error) {
+      console.error('Error deleting refresh token:', error);
+      throw error;
+    } finally {
+      connection.release();
+    }
+  }
 }
 
 module.exports = new UserRepository();

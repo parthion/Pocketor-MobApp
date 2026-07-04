@@ -13,10 +13,9 @@ export default function Index() {
   const router = useRouter();
   const [menuVisible, setMenuVisible] = useState(false);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     setMenuVisible(false);
-    logout();
-    router.replace("/auth/login");
+    await logout();
   };
 
   const totalAmount = collections.reduce((sum, col) => sum + col.totalAmount, 0);

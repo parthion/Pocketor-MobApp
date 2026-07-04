@@ -1,5 +1,5 @@
 import { DayOfWeek, LineType } from '@/types/collection.types';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     Alert,
     Modal,
@@ -16,6 +16,7 @@ interface AddLineModalProps {
   visible: boolean;
   onClose: () => void;
   onSave: (lineData: any) => void;
+  initialData?: any;
 }
 
 const LINE_TYPES: LineType[] = [
@@ -38,7 +39,7 @@ const DAYS_OF_WEEK: DayOfWeek[] = [
   'Saturday',
 ];
 
-export default function AddLineModal({ visible, onClose, onSave }: AddLineModalProps) {
+export default function AddLineModal({ visible, onClose, onSave, initialData }: AddLineModalProps) {
   const [lineName, setLineName] = useState('');
   const [lineType, setLineType] = useState<LineType>('Daily');
   const [day, setDay] = useState<DayOfWeek>('Monday');
@@ -51,6 +52,25 @@ export default function AddLineModal({ visible, onClose, onSave }: AddLineModalP
   const [keepPaidCustomer, setKeepPaidCustomer] = useState(false);
   const [showLineTypePicker, setShowLineTypePicker] = useState(false);
   const [showDayPicker, setShowDayPicker] = useState(false);
+
+  const isEditMode = !!initialData;
+
+  useEffect(() => {
+    if (visible && initialData) {
+      setLineName(initialData.lineName || '');
+      setLineType(initialData.lineType || 'Daily');
+      setDay(initialData.day || 'Monday');
+      setInterestPerHundred(String(initialData.interestPerHundred ?? ''));
+      setBillAmountPerHundred(String(initialData.billAmountPerHundred ?? ''));
+      setNoOfInstall(String(initialData.noOfInstalls ?? ''));
+      setBadLoanDays(String(initialData.badLoanDays ?? ''));
+      setCloseLoanManually(!!initialData.closeLoanManually);
+      setEnablePenalty(!!initialData.enablePenalty);
+      setKeepPaidCustomer(!!initialData.keepPaidCustomerInCompletedTab);
+    } else if (visible && !initialData) {
+      resetForm();
+    }
+  }, [visible, initialData]);
 
   const handleSave = () => {
     // Validation
@@ -124,7 +144,7 @@ export default function AddLineModal({ visible, onClose, onSave }: AddLineModalP
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Add Line</Text>
+          <Text style={styles.headerTitle}>{isEditMode ? 'Edit Line' : 'Add Line'}</Text>
           <TouchableOpacity onPress={handleCancel}>
             <Text style={styles.cancelButton}>Cancel</Text>
           </TouchableOpacity>
@@ -262,7 +282,7 @@ export default function AddLineModal({ visible, onClose, onSave }: AddLineModalP
 
           {/* Save Button */}
           <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-            <Text style={styles.saveButtonText}>SAVE</Text>
+            <Text style={styles.saveButtonText}>{isEditMode ? 'UPDATE' : 'SAVE'}</Text>
           </TouchableOpacity>
 
           <View style={{ height: 40 }} />

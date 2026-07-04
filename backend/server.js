@@ -8,6 +8,7 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const pool = require('./config/database');
 const constants = require('./config/constants');
+const { rateLimiter } = require('./middleware/authMiddleware');
 
 // Load environment variables
 dotenv.config();
@@ -17,8 +18,14 @@ const app = express();
 // ============= MIDDLEWARE =============
 
 // CORS - Allow all origins in development
+const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:19000').split(',').map(o => o.trim());
 app.use(cors({
-  origin: true, // Allow all origins in development
+  origin: process.env.NODE_ENV === 'production'
+    ? (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin)) callback(null, true);
+        else callback(new Error('Not allowed by CORS'));
+      }
+    : true,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -65,12 +72,18 @@ app.get('/api/db-health', async (req, res) => {
   }
 });
 
+// Apply rate limiting to auth endpoints (5 attempts per 15 minutes)
+app.use('/api/auth/login', rateLimiter(5, 15 * 60 * 1000));
+app.use('/api/auth/send-otp', rateLimiter(5, 15 * 60 * 1000));
+app.use('/api/auth/forgot-password', rateLimiter(3, 60 * 60 * 1000));
+
 // Import route handlers
 const authRoutes            = require('./routes/authRoutes');
 const collectionRoutes      = require('./routes/collectionRoutes');
 const loanCollectionRoutes  = require('./routes/loanCollectionRoutes');
 const productConfigRoutes   = require('./routes/productConfigRoutes');
 const paymentsGatewayRoutes = require('./routes/paymentsGatewayRoutes');
+const expenseRoutes         = require('./routes/expenseRoutes');
 
 // Mount routes — existing routes unchanged
 app.use('/api/auth',            authRoutes);
@@ -79,6 +92,7 @@ app.use('/api/loan-collections', loanCollectionRoutes);
 // New additive namespaces
 app.use('/api/product-configs', productConfigRoutes);
 app.use('/api/payments',        paymentsGatewayRoutes);
+app.use('/api/expenses',        expenseRoutes);
 
 // ============= ERROR HANDLING =============
 
@@ -136,6 +150,9 @@ app.listen(PORT, () => {
   console.log('    - GET  /ledger/entries');
   console.log('  • Payments Gateway: /api/payments/* ');
   console.log('    - POST /initiate (protected), POST /webhook (public+signed)');
+  console.log('  • Expenses: /api/expenses/* (protected)');
+  console.log('    - GET / (filter by ?category=&startDate=&endDate=)');
+  console.log('    - GET /summary, POST /, PUT /:id, DELETE /:id');
   console.log('\n✅ Ready to receive requests!\n');
 });
 

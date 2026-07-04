@@ -10,25 +10,22 @@
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_BASE_URL, getAuthHeaders, handleUnauthorized } from './config';
+import { API_BASE_URL, getAuthHeaders, getPublicHeaders, handleUnauthorized } from './config';
 import { ApiResponse } from './types';
 
 // Token management
 const TOKEN_KEY = 'auth_token';
 const REFRESH_TOKEN_KEY = 'refresh_token';
 
-/**
- * Helper function to make auth API calls
- */
-async function authCall<T>(
+async function makeCall<T>(
   endpoint: string,
-  method: 'GET' | 'POST' | 'PUT' | 'DELETE' = 'GET',
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE',
+  headers: Record<string, string>,
   body?: any
 ): Promise<ApiResponse<T>> {
   try {
     const url = `${API_BASE_URL}${endpoint}`;
     console.log(`[Auth API] ${method} ${url}`);
-    const headers = await getAuthHeaders();
 
     const options: RequestInit = {
       method,
@@ -37,8 +34,7 @@ async function authCall<T>(
     };
 
     const response = await fetch(url, options);
-    
-    // Check if we got a response before trying to parse JSON
+
     if (!response) {
       throw new Error('No response from server');
     }
@@ -61,11 +57,10 @@ async function authCall<T>(
     return data;
   } catch (error) {
     console.error(`Auth Error [${method} ${endpoint}]:`, error);
-    // Provide more specific error messages
     let errorMessage = 'An error occurred';
     if (error instanceof Error) {
-      if (error.message.includes('Failed to fetch') || error.message.includes('Network request failed')) {
-        errorMessage = 'Cannot connect to server. Please check if the backend is running.';
+      if (error.message.includes('Failed to fetch') || error.message.includes('Network request failed') || error.message.includes('Network request timed out')) {
+        errorMessage = 'Cannot connect to server. Check that the backend is running and your device is on the same network.';
       } else {
         errorMessage = error.message;
       }
@@ -76,6 +71,26 @@ async function authCall<T>(
       error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
+}
+
+async function publicCall<T>(
+  endpoint: string,
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE' = 'POST',
+  body?: any
+): Promise<ApiResponse<T>> {
+  return makeCall<T>(endpoint, method, getPublicHeaders(), body);
+}
+
+/**
+ * Helper function to make auth API calls
+ */
+async function authCall<T>(
+  endpoint: string,
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE' = 'GET',
+  body?: any
+): Promise<ApiResponse<T>> {
+  const headers = await getAuthHeaders();
+  return makeCall<T>(endpoint, method, headers, body);
 }
 
 // ============= REGISTRATION =============
@@ -89,10 +104,10 @@ export const registerUser = async (
   name: string,
   phone: string
 ) => {
-  return authCall<{ userId: string; message: string }>('/auth/register', 'POST', {
+  return publicCall<{ userId: string; message: string }>('/auth/register', 'POST', {
     email,
     password,
-    passwordConfirm: password, // Add password confirmation
+    passwordConfirm: password,
     name,
     phone,
   });
@@ -102,7 +117,7 @@ export const registerUser = async (
  * Check if user is already registered
  */
 export const checkUserExists = async (email: string): Promise<boolean> => {
-  const response = await authCall<{ exists: boolean }>('/auth/check-user', 'POST', {
+  const response = await publicCall<{ exists: boolean }>('/auth/check-user', 'POST', {
     email,
   });
   return response.success && response.data?.exists ? true : false;
@@ -114,7 +129,7 @@ export const checkUserExists = async (email: string): Promise<boolean> => {
  * Login user with email
  */
 export const loginWithEmail = async (email: string, password: string) => {
-  const response = await authCall<{ token: string; user: any }>(
+  const response = await publicCall<{ token: string; user: any }>(
     '/auth/login',
     'POST',
     { email, password, loginType: 'email' }
@@ -122,6 +137,9 @@ export const loginWithEmail = async (email: string, password: string) => {
 
   if (response.success && response.data) {
     await AsyncStorage.setItem(TOKEN_KEY, response.data.token);
+    if (response.data.refreshToken) {
+      await AsyncStorage.setItem(REFRESH_TOKEN_KEY, response.data.refreshToken);
+    }
   }
 
   return response;
@@ -131,7 +149,7 @@ export const loginWithEmail = async (email: string, password: string) => {
  * Login user with phone number
  */
 export const loginWithPhone = async (phone: string, password: string) => {
-  const response = await authCall<{ token: string; user: any }>(
+  const response = await publicCall<{ token: string; user: any }>(
     '/auth/login',
     'POST',
     { phone, password, loginType: 'phone' }
@@ -139,6 +157,9 @@ export const loginWithPhone = async (phone: string, password: string) => {
 
   if (response.success && response.data) {
     await AsyncStorage.setItem(TOKEN_KEY, response.data.token);
+    if (response.data.refreshToken) {
+      await AsyncStorage.setItem(REFRESH_TOKEN_KEY, response.data.refreshToken);
+    }
   }
 
   return response;
@@ -175,7 +196,7 @@ export const updateUserRole = async (userId: string, role: 'admin' | 'agent') =>
  * Send OTP to email or phone
  */
 export const sendOTP = async (email?: string, phone?: string) => {
-  return authCall<{ otp?: string }>('/auth/send-otp', 'POST', {
+  return publicCall<{ otp?: string }>('/auth/send-otp', 'POST', {
     email,
     phone,
   });
@@ -185,7 +206,7 @@ export const sendOTP = async (email?: string, phone?: string) => {
  * Verify OTP code
  */
 export const verifyOTP = async (contact: string, otp: string, type: 'email' | 'phone') => {
-  return authCall('/auth/verify-otp', 'POST', {
+  return publicCall('/auth/verify-otp', 'POST', {
     contact,
     otp,
     type,
@@ -198,14 +219,14 @@ export const verifyOTP = async (contact: string, otp: string, type: 'email' | 'p
  * Request password reset
  */
 export const forgotPassword = async (email: string) => {
-  return authCall<{ resetToken: string }>('/auth/forgot-password', 'POST', { email });
+  return publicCall<{ resetToken: string }>('/auth/forgot-password', 'POST', { email });
 };
 
 /**
  * Reset password with token
  */
 export const resetPassword = async (email: string, token: string, newPassword: string) => {
-  return authCall('/auth/reset-password', 'POST', {
+  return publicCall('/auth/reset-password', 'POST', {
     email,
     token,
     newPassword,

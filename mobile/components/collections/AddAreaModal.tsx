@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     Alert,
     FlatList,
@@ -16,12 +16,24 @@ interface AddAreaModalProps {
   onClose: () => void;
   onSave: (areaData: any) => void;
   lines: any[];
+  initialData?: any;
 }
 
-export default function AddAreaModal({ visible, onClose, onSave, lines }: AddAreaModalProps) {
+export default function AddAreaModal({ visible, onClose, onSave, lines, initialData }: AddAreaModalProps) {
   const [areaName, setAreaName] = useState('');
   const [selectedLineId, setSelectedLineId] = useState('');
   const [showLinePicker, setShowLinePicker] = useState(false);
+
+  const isEditMode = !!initialData;
+
+  useEffect(() => {
+    if (visible && initialData) {
+      setAreaName(initialData.name || '');
+      setSelectedLineId(initialData.lineId || '');
+    } else if (visible && !initialData) {
+      resetForm();
+    }
+  }, [visible, initialData]);
 
   const selectedLine = lines.find(line => line.id === selectedLineId);
 
@@ -65,7 +77,7 @@ export default function AddAreaModal({ visible, onClose, onSave, lines }: AddAre
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Add Area</Text>
+          <Text style={styles.headerTitle}>{isEditMode ? 'Edit Area' : 'Add Area'}</Text>
           <TouchableOpacity onPress={handleCancel}>
             <Text style={styles.cancelButton}>Cancel</Text>
           </TouchableOpacity>
@@ -107,7 +119,7 @@ export default function AddAreaModal({ visible, onClose, onSave, lines }: AddAre
 
           {/* Save Button */}
           <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-            <Text style={styles.saveButtonText}>SAVE</Text>
+            <Text style={styles.saveButtonText}>{isEditMode ? 'UPDATE' : 'SAVE'}</Text>
           </TouchableOpacity>
         </ScrollView>
 

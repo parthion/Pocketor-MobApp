@@ -178,6 +178,11 @@ async function handleWebhook(rawBody, signature, payload) {
         'UPDATE loans SET paid_amount = paid_amount + ?, balance_amount = balance_amount - ? WHERE id = ?',
         [gp.amount, gp.amount, gp.loan_id]
       );
+      // Auto-complete loan if balance reaches zero
+      await conn.execute(
+        "UPDATE loans SET status = 'completed', actual_end_date = CURDATE() WHERE id = ? AND balance_amount <= 0 AND status = 'active'",
+        [gp.loan_id]
+      );
       // Write ledger
       await recordPaymentLedger(conn, { userId: gp.user_id, paymentId, amount: gp.amount });
     }

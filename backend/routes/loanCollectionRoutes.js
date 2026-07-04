@@ -23,6 +23,17 @@ router.use(verifyToken);
 router.post('/lines', async (req, res) => {
   try {
     const userId = req.userId;
+    const { lineName, lineType, interestPerHundred } = req.body;
+    if (!lineName || !lineType || interestPerHundred === undefined) {
+      return res.status(constants.STATUS_CODES.BAD_REQUEST).json({ success: false, message: 'lineName, lineType, and interestPerHundred are required' });
+    }
+    const validTypes = ['Daily', 'Weekly', 'Monthly'];
+    if (!validTypes.includes(lineType)) {
+      return res.status(constants.STATUS_CODES.BAD_REQUEST).json({ success: false, message: 'lineType must be Daily, Weekly, or Monthly' });
+    }
+    if (Number(interestPerHundred) <= 0) {
+      return res.status(constants.STATUS_CODES.BAD_REQUEST).json({ success: false, message: 'interestPerHundred must be greater than 0' });
+    }
     const line = await loanCollectionRepo.createLine(userId, req.body);
     
     res.status(constants.STATUS_CODES.CREATED).json({
@@ -164,6 +175,9 @@ router.delete('/lines/:id', async (req, res) => {
 router.post('/areas', async (req, res) => {
   try {
     const userId = req.userId;
+    if (!req.body.name || !req.body.lineId) {
+      return res.status(constants.STATUS_CODES.BAD_REQUEST).json({ success: false, message: 'name and lineId are required' });
+    }
     const area = await loanCollectionRepo.createArea(userId, req.body);
     
     res.status(constants.STATUS_CODES.CREATED).json({
@@ -279,6 +293,9 @@ router.delete('/areas/:id', async (req, res) => {
 router.post('/customers', async (req, res) => {
   try {
     const userId = req.userId;
+    if (!req.body.name || !req.body.lineId || !req.body.areaId) {
+      return res.status(constants.STATUS_CODES.BAD_REQUEST).json({ success: false, message: 'name, lineId, and areaId are required' });
+    }
     const customer = await loanCollectionRepo.createCustomer(userId, req.body);
     
     res.status(constants.STATUS_CODES.CREATED).json({
@@ -399,6 +416,13 @@ router.delete('/customers/:id', async (req, res) => {
 router.post('/loans', async (req, res) => {
   try {
     const userId = req.userId;
+    const { customerId, lineId, areaId, principalAmount, totalAmount, installmentAmount, noOfInstalls, startDate } = req.body;
+    if (!customerId || !lineId || !areaId || !principalAmount || !totalAmount || !installmentAmount || !noOfInstalls || !startDate) {
+      return res.status(constants.STATUS_CODES.BAD_REQUEST).json({ success: false, message: 'customerId, lineId, areaId, principalAmount, totalAmount, installmentAmount, noOfInstalls, startDate are required' });
+    }
+    if (Number(principalAmount) <= 0 || Number(totalAmount) <= 0 || Number(installmentAmount) <= 0 || Number(noOfInstalls) <= 0) {
+      return res.status(constants.STATUS_CODES.BAD_REQUEST).json({ success: false, message: 'Amounts and installments must be positive numbers' });
+    }
     const loan = await loanCollectionRepo.createLoan(userId, req.body);
     
     res.status(constants.STATUS_CODES.CREATED).json({
@@ -544,6 +568,12 @@ router.delete('/loans/:id', async (req, res) => {
 router.post('/payments', async (req, res) => {
   try {
     const userId = req.userId;
+    if (!req.body.loanId || !req.body.customerId || !req.body.amount || !req.body.paymentDate) {
+      return res.status(constants.STATUS_CODES.BAD_REQUEST).json({ success: false, message: 'loanId, customerId, amount, and paymentDate are required' });
+    }
+    if (Number(req.body.amount) <= 0) {
+      return res.status(constants.STATUS_CODES.BAD_REQUEST).json({ success: false, message: 'Payment amount must be greater than 0' });
+    }
     const payment = await loanCollectionRepo.recordPayment(userId, req.body);
     
     res.status(constants.STATUS_CODES.CREATED).json({
@@ -558,6 +588,79 @@ router.post('/payments', async (req, res) => {
       message: 'Failed to record payment',
       error: error.message
     });
+  }
+});
+
+router.get('/areas/by-line/:lineId', async (req, res) => {
+  try {
+    const areas = await loanCollectionRepo.getAreasByLine(req.userId, req.params.lineId);
+    res.status(constants.STATUS_CODES.OK).json({ success: true, data: areas });
+  } catch (error) {
+    res.status(constants.STATUS_CODES.INTERNAL_ERROR).json({ success: false, message: 'Failed to fetch areas', error: error.message });
+  }
+});
+
+router.get('/customers/by-area/:areaId', async (req, res) => {
+  // Verify the area belongs to this user
+  try {
+    const [areaRows] = await require('../config/database').execute('SELECT id FROM areas WHERE id = ? AND user_id = ?', [req.params.areaId, req.userId]);
+    if (!areaRows.length) return res.status(constants.STATUS_CODES.NOT_FOUND).json({ success: false, message: 'Area not found' });
+    const customers = await loanCollectionRepo.getCustomersByArea(req.userId, req.params.areaId);
+    res.status(constants.STATUS_CODES.OK).json({ success: true, data: customers });
+  } catch (error) {
+    res.status(constants.STATUS_CODES.INTERNAL_ERROR).json({ success: false, message: 'Failed to fetch customers', error: error.message });
+  }
+});
+
+router.get('/customers/by-line/:lineId', async (req, res) => {
+  try {
+    const [lineRows] = await require('../config/database').execute('SELECT id FROM lines WHERE id = ? AND user_id = ?', [req.params.lineId, req.userId]);
+    if (!lineRows.length) return res.status(constants.STATUS_CODES.NOT_FOUND).json({ success: false, message: 'Line not found' });
+    const customers = await loanCollectionRepo.getCustomersByLine(req.userId, req.params.lineId);
+    res.status(constants.STATUS_CODES.OK).json({ success: true, data: customers });
+  } catch (error) {
+    res.status(constants.STATUS_CODES.INTERNAL_ERROR).json({ success: false, message: 'Failed to fetch customers', error: error.message });
+  }
+});
+
+router.get('/loans/by-customer/:customerId', async (req, res) => {
+  try {
+    const [custRows] = await require('../config/database').execute('SELECT id FROM customers WHERE id = ? AND user_id = ?', [req.params.customerId, req.userId]);
+    if (!custRows.length) return res.status(constants.STATUS_CODES.NOT_FOUND).json({ success: false, message: 'Customer not found' });
+    const loans = await loanCollectionRepo.getLoansByCustomer(req.userId, req.params.customerId);
+    res.status(constants.STATUS_CODES.OK).json({ success: true, data: loans });
+  } catch (error) {
+    res.status(constants.STATUS_CODES.INTERNAL_ERROR).json({ success: false, message: 'Failed to fetch loans', error: error.message });
+  }
+});
+
+// Alias routes that match what mobile calls
+router.get('/payments/by-loan/:loanId', async (req, res) => {
+  try {
+    const payments = await loanCollectionRepo.getPaymentsByLoan(req.userId, req.params.loanId);
+    res.status(constants.STATUS_CODES.OK).json({ success: true, data: payments });
+  } catch (error) {
+    res.status(constants.STATUS_CODES.INTERNAL_ERROR).json({ success: false, message: 'Failed to fetch payments', error: error.message });
+  }
+});
+
+router.get('/payments/by-customer/:customerId', async (req, res) => {
+  try {
+    const payments = await loanCollectionRepo.getPaymentsByCustomer(req.userId, req.params.customerId);
+    res.status(constants.STATUS_CODES.OK).json({ success: true, data: payments });
+  } catch (error) {
+    res.status(constants.STATUS_CODES.INTERNAL_ERROR).json({ success: false, message: 'Failed to fetch payments', error: error.message });
+  }
+});
+
+// Delete/reverse a payment
+router.delete('/payments/:id', async (req, res) => {
+  try {
+    const deleted = await loanCollectionRepo.deletePayment(req.userId, req.params.id);
+    if (!deleted) return res.status(constants.STATUS_CODES.NOT_FOUND).json({ success: false, message: 'Payment not found' });
+    res.status(constants.STATUS_CODES.OK).json({ success: true, message: 'Payment reversed successfully' });
+  } catch (error) {
+    res.status(constants.STATUS_CODES.INTERNAL_ERROR).json({ success: false, message: 'Failed to reverse payment', error: error.message });
   }
 });
 

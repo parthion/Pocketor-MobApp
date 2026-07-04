@@ -51,14 +51,27 @@ export const getPublicHeaders = () => {
   };
 };
 
+// Callback invoked when any API call receives a 401 (e.g., expired token)
+let _unauthorizedCallback: (() => void) | null = null;
+
+/**
+ * Register a callback to be called when the user's session expires.
+ * Call this from your AuthContext to hook logout into the API layer.
+ */
+export const setUnauthorizedCallback = (cb: () => void): void => {
+  _unauthorizedCallback = cb;
+};
+
 /**
  * Handle unauthorized access
  */
 export const handleUnauthorized = async () => {
   await AsyncStorage.removeItem(TOKEN_KEY);
   await AsyncStorage.removeItem(REFRESH_TOKEN_KEY);
-  // You can emit an event or navigate to login here if needed
   console.warn('User unauthorized - tokens cleared');
+  if (_unauthorizedCallback) {
+    _unauthorizedCallback();
+  }
 };
 
 /**

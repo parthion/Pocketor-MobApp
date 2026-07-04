@@ -1,80 +1,129 @@
 import Header from '@/components/layout/Header';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { expenseService, type Expense } from '@/service/expense.service';
+import expenseQueue, { isNetworkError } from '@/utils/expenseQueue';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
-  Alert, FlatList, Modal, StyleSheet,
-  Text, TextInput, TouchableOpacity, View,
+  ActivityIndicator, Alert, AppState, FlatList, Modal, RefreshControl,
+  StyleSheet, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
 
-const EXPENSE_KEY = 'pocketor_expenses';
 const CATEGORIES = ['Travel', 'Food', 'Office', 'Salary', 'Maintenance', 'Other'];
-
-interface Expense {
-  id: string;
-  title: string;
-  amount: number;
-  category: string;
-  date: string;
-  note: string;
-}
 
 export default function ExpenseScreen() {
   const router = useRouter();
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [filterCategory, setFilterCategory] = useState('All');
+
+  // Form fields
   const [title, setTitle] = useState('');
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('Other');
   const [note, setNote] = useState('');
+  const [saving, setSaving] = useState(false);
+  const appState = useRef(AppState.currentState);
 
-  useEffect(() => { loadExpenses(); }, []);
+  // Flush offline queue whenever the app comes to the foreground
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', nextState => {
+      if (appState.current.match(/inactive|background/) && nextState === 'active') {
+        flushQueue();
+      }
+      appState.current = nextState;
+    });
+    return () => sub.remove();
+  }, []);
 
-  const loadExpenses = async () => {
-    const data = await AsyncStorage.getItem(EXPENSE_KEY);
-    if (data) setExpenses(JSON.parse(data));
+  const flushQueue = async () => {
+    const { synced } = await expenseQueue.flush(data => expenseService.create(data).then(r => {
+      if (!r.success) throw new Error(r.message);
+    }));
+    if (synced > 0) loadExpenses();
   };
 
-  const saveExpenses = async (list: Expense[]) => {
-    await AsyncStorage.setItem(EXPENSE_KEY, JSON.stringify(list));
-    setExpenses(list);
-  };
+  const loadExpenses = useCallback(async () => {
+    try {
+      const res = await expenseService.getAll({ category: filterCategory });
+      if (res.success && res.data) setExpenses(res.data);
+    } catch (err) {
+      Alert.alert('Error', 'Failed to load expenses');
+    } finally {
+      setIsLoading(false);
+      setRefreshing(false);
+    }
+  }, [filterCategory]);
+
+  useEffect(() => {
+    setIsLoading(true);
+    flushQueue().then(() => loadExpenses());
+  }, [loadExpenses]);
 
   const handleAdd = async () => {
     if (!title.trim() || !amount.trim()) {
       Alert.alert('Error', 'Title and amount are required');
       return;
     }
-    const newExpense: Expense = {
-      id: Date.now().toString(),
+    const parsedAmount = parseFloat(amount);
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      Alert.alert('Error', 'Amount must be a positive number');
+      return;
+    }
+    setSaving(true);
+    const expenseData = {
       title: title.trim(),
-      amount: parseFloat(amount),
+      amount: parsedAmount,
       category,
-      date: new Date().toLocaleDateString('en-GB'),
-      note: note.trim(),
+      note: note.trim() || undefined,
     };
-    await saveExpenses([newExpense, ...expenses]);
-    setTitle(''); setAmount(''); setNote(''); setCategory('Other');
-    setShowModal(false);
-    Alert.alert('Success', 'Expense added!');
+    try {
+      const res = await expenseService.create(expenseData);
+      if (res.success && res.data) {
+        setExpenses(prev => [res.data!, ...prev]);
+      }
+      setTitle(''); setAmount(''); setNote(''); setCategory('Other');
+      setShowModal(false);
+    } catch (err) {
+      if (isNetworkError(err)) {
+        // No connectivity — save locally and sync later automatically
+        await expenseQueue.enqueue(expenseData);
+        setTitle(''); setAmount(''); setNote(''); setCategory('Other');
+        setShowModal(false);
+        Alert.alert('Saved Offline', 'No internet connection. Your expense has been saved and will sync automatically when you\'re back online.');
+      } else {
+        Alert.alert('Error', err instanceof Error ? err.message : 'Failed to add expense');
+      }
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleDelete = (id: string) => {
     Alert.alert('Delete', 'Delete this expense?', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: async () => {
-        await saveExpenses(expenses.filter(e => e.id !== id));
-      }},
+      {
+        text: 'Delete', style: 'destructive', onPress: async () => {
+          try {
+            await expenseService.delete(id);
+            setExpenses(prev => prev.filter(e => e.id !== id));
+          } catch {
+            Alert.alert('Error', 'Failed to delete expense');
+          }
+        },
+      },
     ]);
   };
 
-  const filtered = filterCategory === 'All'
-    ? expenses
-    : expenses.filter(e => e.category === filterCategory);
+  const formatDate = (iso: string) => {
+    if (!iso) return '';
+    const [y, m, d] = iso.split('-');
+    return `${d}/${m}/${y}`;
+  };
 
-  const total = filtered.reduce((s, e) => s + e.amount, 0);
+  const total = expenses.reduce((s, e) => s + e.amount, 0);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -110,33 +159,40 @@ export default function ExpenseScreen() {
       />
 
       {/* Expense list */}
-      <FlatList
-        data={filtered}
-        keyExtractor={e => e.id}
-        contentContainerStyle={styles.list}
-        ListEmptyComponent={
-          <View style={styles.empty}>
-            <Text style={styles.emptyIcon}>💳</Text>
-            <Text style={styles.emptyText}>No expenses yet</Text>
-            <Text style={styles.emptySub}>Tap + to record an expense</Text>
-          </View>
-        }
-        renderItem={({ item }) => (
-          <View style={styles.card}>
-            <View style={styles.cardLeft}>
-              <Text style={styles.cardTitle}>{item.title}</Text>
-              <Text style={styles.cardMeta}>{item.category} • {item.date}</Text>
-              {item.note ? <Text style={styles.cardNote}>{item.note}</Text> : null}
+      {isLoading ? (
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color="#007AFF" />
+        </View>
+      ) : (
+        <FlatList
+          data={expenses}
+          keyExtractor={e => e.id}
+          contentContainerStyle={styles.list}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadExpenses(); }} />}
+          ListEmptyComponent={
+            <View style={styles.empty}>
+              <Text style={styles.emptyIcon}>💳</Text>
+              <Text style={styles.emptyText}>No expenses yet</Text>
+              <Text style={styles.emptySub}>Tap + to record an expense</Text>
             </View>
-            <View style={styles.cardRight}>
-              <Text style={styles.cardAmount}>₹ {item.amount.toFixed(2)}</Text>
-              <TouchableOpacity onPress={() => handleDelete(item.id)}>
-                <Text style={styles.deleteBtn}>🗑️</Text>
-              </TouchableOpacity>
+          }
+          renderItem={({ item }) => (
+            <View style={styles.card}>
+              <View style={styles.cardLeft}>
+                <Text style={styles.cardTitle}>{item.title}</Text>
+                <Text style={styles.cardMeta}>{item.category} • {formatDate(item.expenseDate)}</Text>
+                {item.note ? <Text style={styles.cardNote}>{item.note}</Text> : null}
+              </View>
+              <View style={styles.cardRight}>
+                <Text style={styles.cardAmount}>₹ {item.amount.toFixed(2)}</Text>
+                <TouchableOpacity onPress={() => handleDelete(item.id)}>
+                  <Text style={styles.deleteBtn}>🗑️</Text>
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
-        )}
-      />
+          )}
+        />
+      )}
 
       {/* Bottom Navigation */}
       <View style={styles.bottomNav}>
@@ -190,8 +246,8 @@ export default function ExpenseScreen() {
             <Text style={styles.fieldLabel}>Note</Text>
             <TextInput style={styles.input} value={note} onChangeText={setNote} placeholder="Optional note" />
 
-            <TouchableOpacity style={styles.saveBtn} onPress={handleAdd}>
-              <Text style={styles.saveBtnText}>Save Expense</Text>
+            <TouchableOpacity style={[styles.saveBtn, saving && styles.saveBtnDisabled]} onPress={handleAdd} disabled={saving}>
+              <Text style={styles.saveBtnText}>{saving ? 'Saving...' : 'Save Expense'}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -202,6 +258,7 @@ export default function ExpenseScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f5f5f5' },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   totalBox: { backgroundColor: '#007AFF', margin: 16, borderRadius: 12, padding: 16, alignItems: 'center' },
   totalLabel: { color: 'rgba(255,255,255,0.8)', fontSize: 13 },
   totalValue: { color: '#fff', fontSize: 28, fontWeight: 'bold', marginTop: 4 },
@@ -241,5 +298,6 @@ const styles = StyleSheet.create({
   catChipText: { fontSize: 12, color: '#555' },
   catChipTextActive: { color: '#fff', fontWeight: '600' },
   saveBtn: { backgroundColor: '#007AFF', borderRadius: 10, padding: 14, alignItems: 'center', marginTop: 20 },
+  saveBtnDisabled: { backgroundColor: '#93c5fd' },
   saveBtnText: { color: '#fff', fontWeight: '700', fontSize: 16 },
 });

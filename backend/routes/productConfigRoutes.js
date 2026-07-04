@@ -29,6 +29,17 @@ router.get('/', async (req, res) => {
   }
 });
 
+/** GET /api/product-configs/ledger?refType=payment&refId=xxx&account=cash */
+router.get('/ledger/entries', async (req, res) => {
+  try {
+    const { refType, refId, account } = req.query;
+    const entries = await getLedger(req.userId, { refType, refId, account });
+    res.json({ success: true, data: entries });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
+
 /** GET /api/product-configs/:id */
 router.get('/:id', async (req, res) => {
   try {
@@ -127,19 +138,6 @@ router.post('/:id/calc', async (req, res) => {
     res.json({ success: true, data: result });
   } catch (e) {
     res.status(400).json({ success: false, message: e.message });
-  }
-});
-
-// ── Ledger read ───────────────────────────────────────────────────────────────
-
-/** GET /api/product-configs/ledger?refType=payment&refId=xxx&account=cash */
-router.get('/ledger/entries', async (req, res) => {
-  try {
-    const { refType, refId, account } = req.query;
-    const entries = await getLedger(req.userId, { refType, refId, account });
-    res.json({ success: true, data: entries });
-  } catch (e) {
-    res.status(500).json({ success: false, message: e.message });
   }
 });
 

@@ -429,6 +429,12 @@ class LoanCollectionRepository {
     try {
       await connection.beginTransaction();
 
+      const [loanRows] = await connection.execute('SELECT balance_amount, status FROM loans WHERE id = ? AND user_id = ?', [paymentData.loanId, userId]);
+      if (!loanRows.length) throw new Error('Loan not found');
+      const loan = loanRows[0];
+      if (loan.status !== 'active') throw new Error('Cannot record payment on a non-active loan');
+      if (Number(paymentData.amount) > Number(loan.balance_amount)) throw new Error('Payment amount exceeds outstanding balance');
+
       const paymentId = uuidv4();
       const insertQuery = 'INSERT INTO `payments` (id, user_id, loan_id, customer_id, amount, payment_date, payment_type, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?)';
       
@@ -451,6 +457,12 @@ class LoanCollectionRepository {
         paymentData.loanId,
         userId
       ]);
+
+      // Auto-complete loan if balance reaches zero
+      await connection.execute(
+        "UPDATE loans SET status = 'completed', actual_end_date = CURDATE() WHERE id = ? AND user_id = ? AND balance_amount <= 0 AND status = 'active'",
+        [paymentData.loanId, userId]
+      );
 
       await connection.commit();
       return { id: paymentId, ...paymentData };
@@ -483,6 +495,34 @@ class LoanCollectionRepository {
         [userId, customerId]
       );
       return rows.map(this.formatPaymentRow);
+    } finally {
+      connection.release();
+    }
+  }
+
+  async deletePayment(userId, paymentId) {
+    const connection = await pool.getConnection();
+    try {
+      await connection.beginTransaction();
+      // Get payment details first
+      const [payRows] = await connection.execute(
+        'SELECT * FROM payments WHERE id = ? AND user_id = ?',
+        [paymentId, userId]
+      );
+      if (!payRows.length) { await connection.rollback(); return false; }
+      const payment = payRows[0];
+      // Delete payment record
+      await connection.execute('DELETE FROM payments WHERE id = ? AND user_id = ?', [paymentId, userId]);
+      // Reverse the loan balance update
+      await connection.execute(
+        'UPDATE loans SET paid_amount = paid_amount - ?, balance_amount = balance_amount + ?, status = CASE WHEN status = "completed" THEN "active" ELSE status END WHERE id = ? AND user_id = ?',
+        [payment.amount, payment.amount, payment.loan_id, userId]
+      );
+      await connection.commit();
+      return true;
+    } catch (error) {
+      await connection.rollback();
+      throw error;
     } finally {
       connection.release();
     }
